@@ -224,7 +224,7 @@ export function validateP10Sp01Snapshot(snapshot) {
     'transport-sha.txt',
     'source-tree-sha.txt',
     'backend/src/db/migrations/postgres',
-    'migration_manifest_sha256=',
+    'migration_manifest_sha256="$(',
     'migration-manifest.txt',
     'P10_SOURCE_SHA="$TALOS_QUALIFIED_SOURCE_SHA"',
     'P10_SOURCE_TREE="$TALOS_QUALIFIED_SOURCE_TREE_SHA"',

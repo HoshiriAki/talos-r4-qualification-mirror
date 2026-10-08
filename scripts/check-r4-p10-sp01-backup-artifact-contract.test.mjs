@@ -124,10 +124,10 @@ expectFailure('qualification drops authoritative source tree', snapshot => {
 
 expectFailure('qualification stops hashing repository migrations', snapshot => {
   snapshot.runner = snapshot.runner.replace(
-    'migration_manifest_sha256=',
-    'migration_manifest_disabled=',
+    'migration_manifest_sha256="$(',
+    'migration_manifest_disabled="$(',
   )
-}, 'migration_manifest_sha256=')
+}, 'migration_manifest_sha256="$(')
 
 expectFailure('qualification delegates to SQLite legacy backup', snapshot => {
   snapshot.runner = snapshot.runner.replace(
