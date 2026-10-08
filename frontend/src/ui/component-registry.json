@@ -1,0 +1,329 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-07-28T00:00:00Z",
+  "components": [
+    {
+      "id": "talos.ui.button",
+      "name": "TalosButton",
+      "title": "TALOS Button",
+      "description": "Action-semantic button with execution, secondary, danger and ghost variants.",
+      "category": "control",
+      "status": "experimental",
+      "owner": "talos-ui-system",
+      "version": "0.1.0",
+      "canonical": "talos/ui-system/industrial-avant-ui/component-system/COMPONENT_CONTRACT.md",
+      "implementation": {
+        "kind": "talos-native",
+        "path": "src/ui/components/TalosButton.vue"
+      },
+      "variants": ["execution-primary", "secondary", "danger", "ghost"],
+      "states": ["default", "executing", "disabled"],
+      "sizes": ["small", "default", "large"],
+      "capabilities": [],
+      "lab": {
+        "locales": ["zh-CN", "en"],
+        "directions": ["ltr", "rtl"],
+        "motionEngines": ["anime", "gsap", "native"],
+        "futureMotionEngines": ["three"],
+        "designSlots": [
+          {
+            "id": "leading-signal",
+            "title": "Leading signal",
+            "kind": "signal",
+            "position": "before",
+            "required": false,
+            "enabledByDefault": true
+          },
+          {
+            "id": "primary-content",
+            "title": "Primary content",
+            "kind": "content",
+            "position": "overlay",
+            "required": true,
+            "enabledByDefault": true
+          },
+          {
+            "id": "trailing-meta",
+            "title": "Trailing metadata",
+            "kind": "meta",
+            "position": "after",
+            "required": false,
+            "enabledByDefault": false
+          },
+          {
+            "id": "focus-frame",
+            "title": "Focus frame",
+            "kind": "focus",
+            "position": "overlay",
+            "required": false,
+            "enabledByDefault": true
+          },
+          {
+            "id": "state-badge",
+            "title": "State badge",
+            "kind": "meta",
+            "position": "overlay",
+            "required": false,
+            "enabledByDefault": false
+          }
+        ],
+        "preview": {
+          "mode": "sandbox-scene",
+          "defaultScene": "surface",
+          "supportedScenes": ["blank", "surface", "dashboard-shell", "auth-shell", "fullscreen", "modal-context"]
+        },
+        "controls": [
+          {"id":"variant","scope":"component","path":"props.variant","type":"select","labelKey":"uiLab.control.variant","default":"execution-primary","semanticEffect":"Changes the semantic action treatment.","options":[{"label":"Execution primary","value":"execution-primary"},{"label":"Secondary","value":"secondary"},{"label":"Danger","value":"danger"},{"label":"Ghost","value":"ghost"}]},
+          {"id":"state","scope":"component","path":"props.state","type":"select","labelKey":"uiLab.control.state","default":"default","semanticEffect":"Changes the component interaction state.","options":[{"label":"Default","value":"default"},{"label":"Executing","value":"executing"},{"label":"Disabled","value":"disabled"}]},
+          {"id":"size","scope":"component","path":"props.size","type":"select","labelKey":"uiLab.control.size","default":"default","semanticEffect":"Changes the rendered control size.","options":[{"label":"Small","value":"small"},{"label":"Default","value":"default"},{"label":"Large","value":"large"}]},
+          {"id":"label","scope":"component","path":"props.label","type":"text","labelKey":"uiLab.control.label","default":"Run transition","semanticEffect":"Changes the visible action label."}
+        ],
+        "agentExport": {
+          "implementationTargets": ["src/ui/components/TalosButton.vue"],
+          "preserve": ["public props", "accessibility semantics", "reduced-motion behavior", "TALOS design tokens"]
+        },
+        "motions": [
+          {
+            "id": "press-response",
+            "title": "Press response",
+            "available": true,
+            "target": "specimen",
+            "trigger": "press",
+            "durationMs": 420,
+            "delayMs": 0,
+            "easing": {
+              "anime": "out(3)",
+              "gsap": "power3.out",
+              "native": "cubic-bezier(0.22, 1, 0.36, 1)"
+            },
+            "iterations": 1,
+            "tracks": ["transform", "filter"],
+            "keyframes": [
+              {
+                "offset": 0,
+                "label": "REST",
+                "style": {
+                  "transform": "translateY(0) scale(1)",
+                  "filter": "brightness(1)"
+                }
+              },
+              {
+                "offset": 0.32,
+                "label": "CONTACT",
+                "style": {
+                  "transform": "translateY(2px) scale(0.975)",
+                  "filter": "brightness(1.14)"
+                }
+              },
+              {
+                "offset": 1,
+                "label": "RECOVER",
+                "style": {
+                  "transform": "translateY(0) scale(1)",
+                  "filter": "brightness(1)"
+                }
+              }
+            ]
+          },
+          {
+            "id": "signal-sweep",
+            "title": "Signal sweep",
+            "available": true,
+            "target": "probe",
+            "trigger": "hover",
+            "durationMs": 560,
+            "delayMs": 0,
+            "easing": {
+              "anime": "out(4)",
+              "gsap": "power4.out",
+              "native": "cubic-bezier(0.16, 1, 0.3, 1)"
+            },
+            "iterations": 1,
+            "tracks": ["transform", "opacity"],
+            "keyframes": [
+              {
+                "offset": 0,
+                "label": "ARM",
+                "style": {
+                  "transform": "translateX(-190%) skewX(-18deg)",
+                  "opacity": 0
+                }
+              },
+              {
+                "offset": 0.16,
+                "label": "ENTER",
+                "style": {
+                  "transform": "translateX(-120%) skewX(-18deg)",
+                  "opacity": 1
+                }
+              },
+              {
+                "offset": 1,
+                "label": "EXIT",
+                "style": {
+                  "transform": "translateX(430%) skewX(-18deg)",
+                  "opacity": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "trailing-sweep",
+            "title": "Trailing sweep",
+            "available": true,
+            "target": "slot:trailing-meta",
+            "trigger": "manual",
+            "durationMs": 480,
+            "delayMs": 0,
+            "easing": {
+              "anime": "out(3)",
+              "gsap": "power3.out",
+              "native": "cubic-bezier(0.22, 1, 0.36, 1)"
+            },
+            "iterations": 1,
+            "tracks": ["transform", "opacity"],
+            "keyframes": [
+              {
+                "offset": 0,
+                "label": "HIDDEN",
+                "style": {
+                  "transform": "translateX(40px)",
+                  "opacity": 0
+                }
+              },
+              {
+                "offset": 1,
+                "label": "VISIBLE",
+                "style": {
+                  "transform": "translateX(0)",
+                  "opacity": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "conformance": {
+        "level": "L1",
+        "themes": ["dark", "light"],
+        "modes": ["work", "hud"],
+        "reducedMotion": true,
+        "accessibility": true,
+        "visualRegression": false
+      }
+    },
+    {
+      "id": "talos.ui.status-indicator",
+      "name": "TalosStatusIndicator",
+      "title": "TALOS Status Indicator",
+      "description": "Triple-encoded status indicator using shape, semantic color and text.",
+      "category": "feedback",
+      "status": "experimental",
+      "owner": "talos-ui-system",
+      "version": "0.1.0",
+      "canonical": "talos/ui-system/industrial-avant-ui/component-system/STATE_AND_VARIANT_MODEL.md",
+      "implementation": {
+        "kind": "talos-native",
+        "path": "src/ui/components/TalosStatusIndicator.vue"
+      },
+      "variants": ["inline", "stacked"],
+      "states": ["completed", "active", "pending", "overdue", "cancelled"],
+      "sizes": ["default"],
+      "capabilities": [],
+      "lab": {
+        "locales": ["zh-CN", "en"],
+        "directions": ["ltr", "rtl"],
+        "motionEngines": ["anime", "gsap", "native"],
+        "futureMotionEngines": ["three"],
+        "designSlots": [
+          {
+            "id": "status-mark",
+            "title": "Status mark",
+            "kind": "signal",
+            "position": "before",
+            "required": true,
+            "enabledByDefault": true
+          },
+          {
+            "id": "status-label",
+            "title": "Status label",
+            "kind": "content",
+            "position": "overlay",
+            "required": true,
+            "enabledByDefault": true
+          },
+          {
+            "id": "auxiliary-meta",
+            "title": "Auxiliary metadata",
+            "kind": "meta",
+            "position": "after",
+            "required": false,
+            "enabledByDefault": false
+          },
+          {
+            "id": "focus-frame",
+            "title": "Focus frame",
+            "kind": "focus",
+            "position": "overlay",
+            "required": false,
+            "enabledByDefault": false
+          }
+        ],
+        "preview": {
+          "mode": "sandbox-scene",
+          "defaultScene": "surface",
+          "supportedScenes": ["blank", "surface", "dashboard-shell", "auth-shell", "fullscreen", "modal-context"]
+        },
+        "controls": [
+          {"id":"status","scope":"component","path":"props.status","type":"select","labelKey":"uiLab.control.status","default":"active","semanticEffect":"Changes the semantic status and accessible label.","options":[{"label":"Completed","value":"completed"},{"label":"Active","value":"active"},{"label":"Pending","value":"pending"},{"label":"Overdue","value":"overdue"},{"label":"Cancelled","value":"cancelled"}]}
+        ],
+        "agentExport": {
+          "implementationTargets": ["src/ui/components/TalosStatusIndicator.vue"],
+          "preserve": ["triple-encoded status semantics", "accessibility semantics", "TALOS design tokens"]
+        },
+        "motions": []
+      },
+      "conformance": {
+        "level": "L1",
+        "themes": ["dark", "light"],
+        "modes": ["work", "hud"],
+        "reducedMotion": true,
+        "accessibility": true,
+        "visualRegression": false
+      }
+    },
+    {
+      "id": "talos.ui.loading-overlay",
+      "name": "TalosLoadingOverlayFixture",
+      "title": "TALOS Loading Overlay",
+      "description": "Local fullscreen loading fixture for scene, mask, and overlay validation.",
+      "category": "feedback",
+      "status": "experimental",
+      "owner": "talos-ui-system",
+      "version": "0.1.0",
+      "canonical": "talos/ui-system/industrial-avant-ui/component-system/COMPONENT_CONTRACT.md",
+      "implementation": {"kind":"composition","path":"src/ui/components/TalosLoadingOverlayFixture.vue"},
+      "variants": ["overlay"],
+      "states": ["loading"],
+      "sizes": ["viewport"],
+      "capabilities": ["fullscreen-scene"],
+      "lab": {
+        "locales": ["zh-CN", "en"],
+        "directions": ["ltr", "rtl"],
+        "motionEngines": ["anime", "gsap", "native"],
+        "futureMotionEngines": ["three"],
+        "designSlots": [{"id":"loading-message","title":"Loading message","kind":"content","position":"overlay","required":true,"enabledByDefault":true}],
+        "preview": {"mode":"sandbox-scene","defaultScene":"loading-stage","supportedScenes":["blank","surface","fullscreen","loading-stage","background-stage","modal-context"],"fillsViewport":true},
+        "controls": [
+          {"id":"message","scope":"component","path":"props.message","type":"text","labelKey":"uiLab.control.message","default":"Synchronizing local fixture","semanticEffect":"Changes the primary loading message."},
+          {"id":"maskOpacity","scope":"scene","path":"scene.maskOpacity","type":"range","labelKey":"uiLab.control.maskOpacity","default":0.45,"min":0,"max":0.9,"step":0.05,"semanticEffect":"Changes the foreground separation of the local loading scene."}
+        ],
+        "agentExport": {"implementationTargets":["src/ui/components/TalosLoadingOverlayFixture.vue"],"preserve":["local fixture boundary","accessibility semantics","reduced-motion behavior","TALOS design tokens"]},
+        "motions": [
+          {"id":"loading-pulse","title":"Loading pulse","available":true,"target":"specimen","trigger":"mount","durationMs":1200,"delayMs":0,"easing":{"anime":"inOut(2)","gsap":"power2.inOut","native":"ease-in-out"},"iterations":1,"tracks":["opacity","transform"],"keyframes":[{"offset":0,"label":"REST","style":{"opacity":0.45,"transform":"scale(0.96)"}},{"offset":0.5,"label":"PULSE","style":{"opacity":1,"transform":"scale(1)"}},{"offset":1,"label":"REST","style":{"opacity":0.45,"transform":"scale(0.96)"}}]}
+        ]
+      },
+      "conformance": {"level":"L1","themes":["dark","light"],"modes":["work"],"reducedMotion":true,"accessibility":true,"visualRegression":false}
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+# 依赖
+node_modules/
+frontend/node_modules/
+target/
+
+# 数据库文件
+*.db
+*.db-shm
+*.db-wal
+rental.db.backup-*
+/rental.db.backup*
+backups/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 本地开发 TLS（仅运行时/本地生成，不得跟踪固定私钥）
+/certs/*.key
+/certs/localhost.crt
+
+# 自动化认证（禁止提交）
+.harness/credentials.json
+
+# 构建产物
+dist/
+public/
+frontend/dist/
+
+# 本地 Agent / CLI / Plugin 状态（禁止纳入项目版本历史）
+.agents/
+.claude/
+.codex/
+.harness/
+.impeccable/
+.mimocode/
+.opencode/
+.superpowers/
+backend/.claude/
+backend/.harness/
+frontend/.claude/
+frontend/.harness/
+.mcp.json
+skills-lock.json
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 本地测试 cookie 文件（不得提交到版本库）
+p3cookie*.txt
+p3c.txt
+p3final.txt
+/p3*.txt
+
+# Playwright MCP 测试产物（截图/快照/日志）
+.playwright-mcp/
+
+# 防止 Playwright 快照误写入根目录
+/login*.yml
+/after-login*.yml
+/dashboard*.yml
+
+# 根目录一次性 API/数据输出
+/response.body
+/response.txt
+/estimate*.json
+/users.json
+/devices.json
+/*.session.txt
+
+# 不允许 npm 在 pnpm workspace 根目录创建第二套锁文件
+/package-lock.json
+
+# 本地一次性帮助脚本；正式工具必须进入 scripts/
+/__*.js
+/__*.py
+
+# 本地一次性调试产物
+dashboard-final.png
+response.txt
+*.session.txt
+
+# TALOS Runtime Supervisor（日志、诊断包、Node report、可选原生 dump）
+.talos-runtime/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local Git worktrees
+.worktrees/
+
+# 临时文件 / 转移快照（不得提交）
+.tmp-original/
+datatable-demo/
+
+# Harness 生成的本地草稿 HTML
+dashboard-*.html
+shipping-prototype.html
+response.txt
+start.bat

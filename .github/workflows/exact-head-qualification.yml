@@ -1,0 +1,690 @@
+name: TALOS Exact-Head Qualification
+
+on:
+  pull_request:
+    branches:
+      - prototype
+      - 'agent/r4-p*-*'
+    types:
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      source_commit_sha:
+        description: Private authoritative source commit SHA for clean-history mirror qualification
+        required: false
+        type: string
+      source_tree_sha:
+        description: Private authoritative source root tree SHA; enables mirror mode when set
+        required: false
+        type: string
+      source_repository:
+        description: Private authoritative source repository identity for provenance
+        required: false
+        type: string
+      package_branch:
+        description: Private source branch identity used to resolve current-package qualification in mirror mode
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talos-exact-head-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  RUST_TEST_THREADS: '2'
+
+jobs:
+  preflight:
+    name: Exact-head preflight
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD or exact-tree mirror
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
+          SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          actual_tree="$(git rev-parse HEAD^{tree})"
+          if [[ -n "$SOURCE_TREE_SHA" ]]; then
+            test -n "$SOURCE_COMMIT_SHA"
+            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            echo "MIRROR_TRANSPORT_HEAD=$actual"
+            echo "SOURCE_COMMIT_SHA=$SOURCE_COMMIT_SHA"
+            echo "SOURCE_TREE_SHA=$SOURCE_TREE_SHA"
+          else
+            test "$actual" = "$EXPECTED_HEAD"
+            git fetch --no-tags origin prototype:refs/remotes/origin/prototype
+            echo "EXACT_HEAD=$actual"
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate repository policy and structure
+        run: |
+          pnpm quality:ci-policy:test
+          pnpm quality:ci-policy
+          pnpm quality:ci-package:test
+          pnpm quality:ci-package
+          pnpm quality:layout
+          pnpm quality:public-surface:test
+          pnpm quality:public-surface
+          pnpm quality:talos-ops
+          pnpm ui:registry:check
+
+      - name: Validate R4 legacy compatibility closure
+        run: |
+          node scripts/check-r4-legacy-closure.test.mjs
+          node scripts/check-r4-legacy-closure.mjs
+
+      - name: Validate R4 Interconnect stable core
+        run: |
+          node scripts/check-r4-interconnect-fabric.test.mjs
+          node scripts/check-r4-interconnect-fabric.mjs
+
+      - name: Validate R4 public Web/API governance
+        run: |
+          pnpm quality:r4-public-api:test
+          pnpm quality:r4-public-api
+
+      - name: Validate R4 network authority
+        run: |
+          pnpm quality:r4-network:test
+          pnpm quality:r4-network
+
+      - name: Validate R4 plugin permission and isolation
+        run: |
+          pnpm quality:r4-plugin:test
+          pnpm quality:r4-plugin
+
+      - name: Validate R4 platform security hardening
+        run: |
+          pnpm quality:r4-platform-security:test
+          pnpm quality:r4-platform-security
+
+      - name: Validate R4 PostgreSQL 18 production cutover structure
+        run: |
+          node scripts/check-r4-p8-production-persistence.test.mjs
+          node scripts/check-r4-p8-production-persistence.mjs
+          node scripts/check-r4-p8-pg18-migration-authority.test.mjs
+          node scripts/check-r4-p8-pg18-migration-authority.mjs
+          node scripts/check-r4-p8-lifecycle-write-cutover.test.mjs
+          node scripts/check-r4-p8-lifecycle-write-cutover.mjs
+          node scripts/check-r4-p8-reservation-write-cutover.test.mjs
+          node scripts/check-r4-p8-reservation-write-cutover.mjs
+          node scripts/check-r4-p8-order-commands-cutover.test.mjs
+          node scripts/check-r4-p8-order-commands-cutover.mjs
+          node scripts/check-r4-p8-workflow-cutover.test.mjs
+          node scripts/check-r4-p8-workflow-cutover.mjs
+          node scripts/check-r4-p8-rental-closure-cutover.test.mjs
+          node scripts/check-r4-p8-rental-closure-cutover.mjs
+          node scripts/check-r4-p8-r3-settlement-cutover.test.mjs
+          node scripts/check-r4-p8-r3-settlement-cutover.mjs
+          node scripts/check-r4-p8-auth-security-cutover.test.mjs
+          node scripts/check-r4-p8-auth-security-cutover.mjs
+          node scripts/check-r4-p8-bootstrap-authority.test.mjs
+          node scripts/check-r4-p8-bootstrap-authority.mjs
+          node scripts/check-r4-p8-audit-compatibility-cutover.test.mjs
+          node scripts/check-r4-p8-audit-compatibility-cutover.mjs
+          node scripts/check-r4-p8-consent-compatibility-cutover.test.mjs
+          node scripts/check-r4-p8-consent-compatibility-cutover.mjs
+          node scripts/check-r4-p8-report-compatibility-cutover.test.mjs
+          node scripts/check-r4-p8-report-compatibility-cutover.mjs
+          node scripts/check-r4-p8-report-route-cutover.test.mjs
+          node scripts/check-r4-p8-report-route-cutover.mjs
+          node scripts/check-r4-p8-work-task-cutover.test.mjs
+          node scripts/check-r4-p8-work-task-cutover.mjs
+          node scripts/check-r4-p8-platform-tenant-cutover.test.mjs
+          node scripts/check-r4-p8-platform-tenant-cutover.mjs
+          node scripts/check-r4-p8-order-http-residual-cutover.test.mjs
+          node scripts/check-r4-p8-order-http-residual-cutover.mjs
+          node scripts/check-r4-p8-user-settings-profile-cutover.test.mjs
+          node scripts/check-r4-p8-user-settings-profile-cutover.mjs
+          node scripts/check-r4-p8-device-candidate-cutover.test.mjs
+          node scripts/check-r4-p8-device-candidate-cutover.mjs
+          node scripts/check-r4-p8-device-authority-cutover.test.mjs
+          node scripts/check-r4-p8-device-authority-cutover.mjs
+          node scripts/check-r4-p8-model-authority-cutover.test.mjs
+          node scripts/check-r4-p8-model-authority-cutover.mjs
+          node scripts/check-r4-p8-warehouse-authority-cutover.test.mjs
+          node scripts/check-r4-p8-warehouse-authority-cutover.mjs
+          node scripts/check-r4-p8-warehouse-routing-cutover.test.mjs
+          node scripts/check-r4-p8-warehouse-routing-cutover.mjs
+          node scripts/check-r4-p8-device-read-cutover.test.mjs
+          node scripts/check-r4-p8-device-read-cutover.mjs
+          node scripts/check-r4-p8-device-mutation-cutover.test.mjs
+          node scripts/check-r4-p8-device-mutation-cutover.mjs
+          node scripts/check-r4-p8-device-import-cutover.test.mjs
+          node scripts/check-r4-p8-device-import-cutover.mjs
+          node scripts/check-r4-p8-dashboard-cutover.test.mjs
+          node scripts/check-r4-p8-dashboard-cutover.mjs
+          node scripts/check-r4-p8-warehouse-advanced-cutover.test.mjs
+          node scripts/check-r4-p8-warehouse-advanced-cutover.mjs
+          node scripts/check-r4-p8-excel-import-cutover.test.mjs
+          node scripts/check-r4-p8-excel-import-cutover.mjs
+          node scripts/check-r4-p8-registry-storage-requirements.test.mjs
+          node scripts/check-r4-p8-registry-storage-requirements.mjs
+          node scripts/check-r4-p8-registry-provider-descriptors.test.mjs
+          node scripts/check-r4-p8-registry-provider-descriptors.mjs
+          node scripts/check-r4-p8-procurement-cutover.test.mjs
+          node scripts/check-r4-p8-procurement-cutover.mjs
+          node scripts/check-r4-p8-depreciation-cutover.test.mjs
+          node scripts/check-r4-p8-depreciation-cutover.mjs
+          node scripts/check-r4-p8-roa-cutover.test.mjs
+          node scripts/check-r4-p8-roa-cutover.mjs
+          node scripts/check-r4-p8-auth-audit-residual-cutover.test.mjs
+          node scripts/check-r4-p8-auth-audit-residual-cutover.mjs
+          node scripts/check-r4-p8-deletion-compatibility-cutover.test.mjs
+          node scripts/check-r4-p8-deletion-compatibility-cutover.mjs
+          node scripts/check-r4-p8-identity-authority-cutover.test.mjs
+          node scripts/check-r4-p8-identity-authority-cutover.mjs
+          node scripts/check-r4-p8-registry-audit-cutover.test.mjs
+          node scripts/check-r4-p8-registry-audit-cutover.mjs
+          node scripts/check-r4-p8-machine-authority-cutover.test.mjs
+          node scripts/check-r4-p8-machine-authority-cutover.mjs
+          node scripts/check-r4-p8-workflow-worker-tenant-source.test.mjs
+          node scripts/check-r4-p8-workflow-worker-tenant-source.mjs
+          node scripts/check-r4-p8-integration-catalog-cutover.test.mjs
+          node scripts/check-r4-p8-integration-catalog-cutover.mjs
+          node scripts/check-r4-p8-registry-repository-provider-cutover.test.mjs
+          node scripts/check-r4-p8-registry-repository-provider-cutover.mjs
+          node scripts/check-r4-p8-operation-runtime-cutover.test.mjs
+          node scripts/check-r4-p8-operation-runtime-cutover.mjs
+          node scripts/check-r4-p8-webhook-persistence-cutover.test.mjs
+          node scripts/check-r4-p8-webhook-persistence-cutover.mjs
+          node scripts/check-r4-p8-scheduler-recovery-cutover.test.mjs
+          node scripts/check-r4-p8-scheduler-recovery-cutover.mjs
+          node scripts/check-r4-p8-deposit-refund-cutover.test.mjs
+          node scripts/check-r4-p8-deposit-refund-cutover.mjs
+          node scripts/check-r4-p8-deposit-authority.test.mjs
+          node scripts/check-r4-p8-deposit-authority.mjs
+          node scripts/check-r4-p8-refund-authority.test.mjs
+          node scripts/check-r4-p8-refund-authority.mjs
+          node scripts/check-r4-p8-damage-authority.test.mjs
+          node scripts/check-r4-p8-damage-authority.mjs
+          node scripts/check-r4-p8-repair-authority.test.mjs
+          node scripts/check-r4-p8-repair-authority.mjs
+          node scripts/check-r4-p8-invoice-authority.test.mjs
+          node scripts/check-r4-p8-invoice-authority.mjs
+          node scripts/check-r4-p8-settlement-authority.test.mjs
+          node scripts/check-r4-p8-settlement-authority.mjs
+          node scripts/check-r4-p8-tax-authority.test.mjs
+          node scripts/check-r4-p8-tax-authority.mjs
+          node scripts/check-r4-p8-credit-authority.test.mjs
+          node scripts/check-r4-p8-credit-authority.mjs
+          node scripts/check-r4-p8-overdue-authority.test.mjs
+          node scripts/check-r4-p8-overdue-authority.mjs
+          node scripts/check-r4-p8-pricing-authority.test.mjs
+          node scripts/check-r4-p8-pricing-authority.mjs
+          node scripts/check-r4-p8-legacy-order-authority.test.mjs
+          node scripts/check-r4-p8-legacy-order-authority.mjs
+          node scripts/check-r4-p8-notify-authority.test.mjs
+          node scripts/check-r4-p8-notify-authority.mjs
+          node scripts/check-r4-p8-contract-authority.test.mjs
+          node scripts/check-r4-p8-contract-authority.mjs
+          node scripts/check-r4-p8-barcode-authority.test.mjs
+          node scripts/check-r4-p8-barcode-authority.mjs
+          node scripts/check-r4-p8-optical-sop-authority.test.mjs
+          node scripts/check-r4-p8-optical-sop-authority.mjs
+          node scripts/check-r4-p8-booking-authority.test.mjs
+          node scripts/check-r4-p8-booking-authority.mjs
+          node scripts/check-r4-p8-reservation-authority.test.mjs
+          node scripts/check-r4-p8-reservation-authority.mjs
+          node scripts/check-r4-p8-tenant-governance-authority.test.mjs
+          node scripts/check-r4-p8-tenant-governance-authority.mjs
+          node scripts/check-r4-p8-tenant-preview-authority.test.mjs
+          node scripts/check-r4-p8-tenant-preview-authority.mjs
+          node scripts/check-r4-p8-tenant-simulation-authority.test.mjs
+          node scripts/check-r4-p8-tenant-simulation-authority.mjs
+          node scripts/check-r4-p8-module-factory-sqlite-optional.test.mjs
+          node scripts/check-r4-p8-module-factory-sqlite-optional.mjs
+          node scripts/check-r4-p8-appstate-sqlite-optional.test.mjs
+          node scripts/check-r4-p8-appstate-sqlite-optional.mjs
+          node scripts/check-r4-p8-startup-sqlite-optional.test.mjs
+          node scripts/check-r4-p8-startup-sqlite-optional.mjs
+          node scripts/check-r4-p8-app-error-backend-neutral.test.mjs
+          node scripts/check-r4-p8-app-error-backend-neutral.mjs
+          node scripts/check-r4-p8-production-admission.test.mjs
+          node scripts/check-r4-p8-production-admission.mjs
+          node scripts/check-r4-p8-maintenance-cutover.test.mjs
+          node scripts/check-r4-p8-maintenance-cutover.mjs
+          node scripts/check-r4-p8-tenant-resolution-cutover.test.mjs
+          node scripts/check-r4-p8-tenant-resolution-cutover.mjs
+          node scripts/check-r4-p8-platform-membership-cutover.test.mjs
+          node scripts/check-r4-p8-platform-membership-cutover.mjs
+          node scripts/check-r4-p8-tenant-membership-authority.test.mjs
+          node scripts/check-r4-p8-tenant-membership-authority.mjs
+          node scripts/check-r4-p8-final-closure.test.mjs
+          node scripts/check-r4-p8-final-closure.mjs
+          node scripts/check-r4-p9-sp01-deployment-profile.test.mjs
+          node scripts/check-r4-p9-sp01-deployment-profile.mjs
+          node scripts/check-r4-p9-sp01-compose-config.mjs
+          node scripts/check-r4-p9-sp02-clean-stack.test.mjs
+          node scripts/check-r4-p9-sp02-clean-stack.mjs
+          node scripts/check-r4-p9-sp03-deployed-auth.test.mjs
+          node scripts/check-r4-p9-sp03-deployed-auth.mjs
+          node scripts/check-r4-p9-sp04-business-evidence.test.mjs
+          node scripts/check-r4-p9-sp04-business-evidence.mjs
+          node scripts/check-r4-p9-sp05-observability-plugin-network.test.mjs
+          node scripts/check-r4-p9-sp05-observability-plugin-network.mjs
+          node scripts/check-r4-p9-sp06-restart-recovery-clean-shutdown.test.mjs
+          node scripts/check-r4-p9-sp06-restart-recovery-clean-shutdown.mjs
+
+      - name: Validate R3 structural boundaries
+        run: |
+          node scripts/check-r3-damage-settlement-clock-boundary.mjs
+          node scripts/check-r3-damage-settlement-clock-boundary.test.mjs
+          node scripts/check-r3-observability-retirement-boundary.mjs
+          node scripts/check-r3-observability-retirement-boundary.test.mjs
+          node scripts/check-r3-machine-simulation-boundary.mjs
+          node scripts/check-r3-machine-simulation-boundary.test.mjs
+
+      - name: Check exact-head diff whitespace
+        if: ${{ inputs.source_tree_sha == '' }}
+        run: git diff --check origin/prototype...HEAD
+
+      - name: Record mirror pre-export whitespace authority
+        if: ${{ inputs.source_tree_sha != '' }}
+        run: echo "Mirror mode uses the private exporter preflight git diff --check before the parentless tree is pushed."
+
+  quality:
+    name: Exact-head quality and PostgreSQL 18
+    needs: preflight
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_USER: talos
+          POSTGRES_PASSWORD: talos-ci-only
+          POSTGRES_DB: talos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U talos -d talos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TALOS_TEST_POSTGRES_URL: postgresql://talos:talos-ci-only@127.0.0.1:5432/talos_test
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD or exact-tree mirror
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
+          SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          actual_tree="$(git rev-parse HEAD^{tree})"
+          if [[ -n "$SOURCE_TREE_SHA" ]]; then
+            test -n "$SOURCE_COMMIT_SHA"
+            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            echo "MIRROR_TRANSPORT_HEAD=$actual"
+            echo "SOURCE_COMMIT_SHA=$SOURCE_COMMIT_SHA"
+            echo "SOURCE_TREE_SHA=$SOURCE_TREE_SHA"
+          else
+            test "$actual" = "$EXPECTED_HEAD"
+            git fetch --no-tags origin prototype:refs/remotes/origin/prototype
+            echo "EXACT_HEAD=$actual"
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable pinned 2026-09-12
+        with:
+          components: rustfmt,clippy
+
+      - name: Frontend build and dependency audit
+        run: |
+          pnpm --dir frontend typecheck
+          pnpm --dir frontend build
+          pnpm audit --audit-level high
+
+      - name: Rust format, workspace check, tests and provenance binary
+        working-directory: backend
+        run: |
+          cargo fmt --all -- --check
+          cargo check --workspace --locked
+          cargo test --workspace --locked --no-fail-fast
+          cargo build --locked --bin talos-backend
+
+      - name: PostgreSQL feature and migration schema
+        working-directory: backend
+        run: |
+          cargo check --workspace --no-default-features --features postgres --locked
+          cargo test --features postgres --bin talos-backend db::migrations_pg --locked
+          cargo test --features postgres --bin talos-backend db::r4_migrations --locked
+
+      - name: Live PostgreSQL 18 fresh production migration evidence
+        working-directory: backend
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p ../.talos-evidence
+          log=../.talos-evidence/pg18-fresh-production-migration.log
+          set +e
+          cargo test --features postgres --bin talos-backend live_pg18_fresh_complete_migration_chain_is_idempotent --locked -- --ignored --nocapture 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          {
+            echo '## PostgreSQL 18 fresh production migration evidence'
+            echo
+            echo '```text'
+            tail -n 200 "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Upload live PostgreSQL 18 migration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pg18-fresh-production-migration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .talos-evidence/pg18-fresh-production-migration.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Live PostgreSQL 18 scoped repository adapter qualification
+        working-directory: backend
+        run: |
+          cargo test --features postgres --bin talos-backend live_pg18_scoped_order_read_preserves_tenant_preview_and_mode_boundaries --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_quote_cutover_preserves_tenant_snapshot_and_conversion_authority --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_lifecycle_write_preserves_version_history_outbox_and_scope --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_reservation_write_preserves_atomic_batch_outbox_and_scope --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_order_commands_preserve_draft_collision_version_scope_and_preview --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_notification_authority_preserves_scope_templates_messages_order_hydration_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_contract_authority_preserves_scope_order_identity_signature_lifecycle_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_barcode_authority_preserves_scope_idempotence_scan_references_stats_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_optical_sop_authority_preserves_scope_completion_damage_link_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_booking_reads_preserve_scope_availability_pricing_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_legacy_reservation_compatibility_preserves_scope_conflicts_rules_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_governance_preserves_platform_scope_redaction_health_intent_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_preview_preserves_actor_binding_workspace_modes_tenant_reads_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_simulation_preserves_scope_idempotency_overlay_evidence_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_workflow_preserves_durable_identity_claims_resolution_and_scope --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_rental_closure_preserves_return_inspection_settlement_and_scope --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_r3_settlement_preserves_r2_authority_terminal_seal_and_atomic_close --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_auth_security_preserves_rate_session_revocation_and_totp_cas --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_bootstrap_authority_serializes_initial_owner_creation_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_audit_compatibility_preserves_legacy_view_and_canonical_store --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_user_settings_profile_preserves_identity_global_upsert_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_device_candidate_cutover_preserves_tenant_scope_order_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_device_authority_preserves_scope_crud_paging_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_excel_import_registry_preserves_tenant_lookup_and_device_write_authority --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_model_authority_preserves_scope_pricing_references_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_warehouse_authority_preserves_scope_regions_devices_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_procurement_authority_preserves_scope_identity_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_depreciation_authority_preserves_scope_monthly_idempotence_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_roa_authority_preserves_scope_revenue_schema_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_dashboard_reads_are_tenant_scoped_across_all_aggregate_families --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_consent_compatibility_preserves_scope_record_check_revoke_and_audit --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_report_compatibility_preserves_tenant_scope_and_aggregates --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_work_task_cutover_preserves_tenant_scope_version_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_platform_tenant_cutover_preserves_owner_audit_lifecycle_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_deletion_compatibility_preserves_scope_dedup_and_owner_safety --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_identity_authority_preserves_scope_roles_sessions_and_expiry --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_registry_audit_is_append_only_tenant_scoped_and_restart_durable --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_machine_authority_preserves_fresh_scope_rotation_rate_and_audit --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_maintenance_compatibility_preserves_status_sync_overdue_tenant_and_idempotency --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_resolution_preserves_slug_status_projection_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_platform_membership_read_preserves_projection_roles_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_platform_membership_mutations_preserve_owner_and_audit_atomicity --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_membership_authority_preserves_scope_credentials_human_governance_and_transfer --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tenant_ownership_transfer_serializes_competing_successors --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_workflow_worker_tenant_source_discovers_deduplicates_limits_and_recomposes --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_integration_catalog_preserves_manifest_binding_history_and_tenant_revision --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_integration_module_composition_routes_management_authorities_to_postgres --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_operation_runtime_preserves_claim_outcome_recovery_and_reconciliation --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_webhook_persistence_preserves_identity_claim_retry_dead_letter_and_replay --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_scheduler_recovery_preserves_snapshot_boundary_atomicity_and_cursor_fairness --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_deposit_refund_preserves_ledger_idempotency_reconciliation_and_metrics --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_deposit_authority_preserves_scope_ledger_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_refund_authority_preserves_scope_transitions_ledger_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_damage_authority_preserves_scope_state_machine_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_repair_authority_preserves_scope_lifecycle_device_return_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_invoice_authority_preserves_tenant_numbering_atomic_accounting_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_settlement_authority_preserves_scope_reaggregation_confirmation_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_tax_authority_preserves_scope_active_rate_export_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_credit_authority_preserves_scope_atomic_score_identity_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_overdue_authority_preserves_scope_identity_escalation_delegation_and_recomposition --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_pricing_authority_preserves_scope_atomic_config_and_recomposition --locked -- --ignored --nocapture
+
+      - name: PostgreSQL 18 bounded P8-F performance baseline
+        working-directory: backend
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p ../.talos-evidence
+          log=../.talos-evidence/p8f-pg18-performance-baseline.log
+          set +e
+          cargo test --features postgres --bin talos-backend live_pg18_p8f_performance_baseline_bounds_order_read_and_transactional_write --locked -- --ignored --nocapture 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          {
+            echo '## P8-F PostgreSQL 18 bounded performance baseline'
+            echo
+            echo 'This is a qualification-run regression baseline, not a production SLO.'
+            echo
+            echo '```text'
+            grep 'P8F_PERF_BASELINE' "$log" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Upload P8-F PostgreSQL 18 performance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p8f-pg18-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .talos-evidence/p8f-pg18-performance-baseline.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Live PostgreSQL 18 machine-owner concurrency evidence
+        working-directory: backend
+        run: |
+          cargo test --features postgres --bin talos-backend live_machine_owner_write_skew_is_serialized_for_insert_and_update --locked -- --ignored --nocapture
+
+      - name: Live PostgreSQL 18 Interconnect evidence
+        working-directory: backend
+        run: |
+          cargo test --features postgres --bin talos-backend live_pg18_event_replay_dedup_and_tenant_isolation_survive_driver_restart --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_work_restart_reclaim_fences_stale_generation_and_identity_reuse --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_state_head_rejects_revision_regression --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_business_transaction_outbox_is_atomic_and_flush_is_durable --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_work_admission_is_atomic_and_cannot_retrofit_generic_work --locked -- --ignored --nocapture
+
+      - name: Live PostgreSQL 18 webhook Event replay evidence
+        working-directory: backend
+        run: |
+          cargo test --features postgres --bin talos-backend live_pg18_webhook_event_replay_reuses_persisted_envelope_identity --locked -- --ignored --nocapture
+
+      - name: Live PostgreSQL 18 plugin host evidence
+        working-directory: backend
+        run: |
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_installation_resolution_is_exactly_executable_pinned --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_storage_is_scoped_quota_bounded_and_revocation_aware --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_initial_install_write_skew_is_serialized_by_tenant_plugin_lock --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_upgrade_records_exact_preserve_pins_decision --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend live_pg18_plugin_background_execution_reauthorizes_current_claim_and_blocks_revocation --locked -- --ignored --nocapture
+          cargo test --features postgres --bin talos-backend p9_sp05_qualification_runtime_admits_fixture_and_rejects_loopback_egress --locked -- --ignored --nocapture
+
+      - name: Install pinned cargo-audit
+        working-directory: backend
+        run: cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: RustSec audit
+        working-directory: backend
+        run: cargo audit --ignore RUSTSEC-2023-0071
+
+      - name: Generate and verify exact-head build provenance
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
+          SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+          SOURCE_REPOSITORY: ${{ inputs.source_repository || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$SOURCE_TREE_SHA" ]]; then
+            test -n "$SOURCE_COMMIT_SHA"
+            test -n "$SOURCE_REPOSITORY"
+            node scripts/r4-build-provenance.mjs generate \
+              --source-sha "$SOURCE_COMMIT_SHA" \
+              --source-tree-sha "$SOURCE_TREE_SHA" \
+              --repository "$SOURCE_REPOSITORY" \
+              --artifact public \
+              --artifact backend/target/debug/talos-backend \
+              --output .talos-provenance/exact-head.json
+            node scripts/r4-build-provenance.mjs verify \
+              --manifest .talos-provenance/exact-head.json \
+              --source-sha "$SOURCE_COMMIT_SHA" \
+              --source-tree-sha "$SOURCE_TREE_SHA"
+          else
+            node scripts/r4-build-provenance.mjs generate \
+              --source-sha "$EXPECTED_HEAD" \
+              --artifact public \
+              --artifact backend/target/debug/talos-backend \
+              --output .talos-provenance/exact-head.json
+            node scripts/r4-build-provenance.mjs verify \
+              --manifest .talos-provenance/exact-head.json \
+              --source-sha "$EXPECTED_HEAD"
+          fi
+
+      - name: Upload exact-head provenance evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: exact-head-build-provenance
+          path: |
+            .talos-provenance/exact-head.json
+            .talos-provenance/exact-head.json.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Final exact-head whitespace check
+        if: ${{ inputs.source_tree_sha == '' }}
+        run: git diff --check origin/prototype...HEAD
+
+  package_qualification:
+    name: Current package qualification
+    needs: [preflight, quality]
+    if: (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_branch != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify package qualification source identity
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
+          SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          actual_tree="$(git rev-parse HEAD^{tree})"
+          if [[ -n "$SOURCE_TREE_SHA" ]]; then
+            test -n "$SOURCE_COMMIT_SHA"
+            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            echo "PACKAGE_MIRROR_TRANSPORT_HEAD=$actual"
+          else
+            test "$actual" = "$EXPECTED_HEAD"
+            echo "EXACT_HEAD=$actual"
+          fi
+
+      - name: Resolve current package qualification
+        id: package
+        shell: bash
+        env:
+          HEAD_REF: ${{ inputs.package_branch || github.head_ref }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-package-qualification.mjs \
+            --branch "$HEAD_REF" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Execute current package checks and qualification
+        if: steps.package.outputs.required == 'true'
+        shell: bash
+        env:
+          HEAD_REF: ${{ inputs.package_branch || github.head_ref }}
+        run: |
+          set -euo pipefail
+          node scripts/ci-run-package-qualification.mjs --branch "$HEAD_REF"
+
+      - name: Upload current package evidence
+        if: github.event_name == 'pull_request' && steps.package.outputs.required == 'true' && always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: current-package-${{ steps.package.outputs.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .talos-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record no package-specific qualification
+        if: steps.package.outputs.required != 'true'
+        run: echo "No package-specific qualification is registered for this non-SP branch."

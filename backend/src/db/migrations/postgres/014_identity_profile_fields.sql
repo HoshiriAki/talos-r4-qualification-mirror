@@ -1,0 +1,1 @@
+-- Identity profile fields are part of the clean identity baseline.

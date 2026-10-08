@@ -1,0 +1,141 @@
+{
+  "$schema": "https://tr.designtokens.org/format/#/schema",
+  "version": "1.1",
+  "name": "Industrial Avant UI — Talos",
+  "description": "Machine-readable design tokens from industrial-avant-ui-complete.md v1.1. Source of truth is the Markdown spec; this JSON is a derivative for AI code generation.",
+
+  "color": {
+    "background": {
+      "base":       { "value": "#0D0D0F", "role": "页面最底层" },
+      "surface":    { "value": "#161618", "role": "卡片、面板、侧边栏" },
+      "elevated":   { "value": "#1E1E22", "role": "表格行悬停、次要浮层" },
+      "field":      { "value": "#252528", "role": "输入框背景、代码块" },
+      "subtle":     { "value": "#2A2A2E", "role": "分割区域、次级背景" },
+      "muted":      { "value": "#32323A", "role": "最亮层，极少使用" }
+    },
+    "border": {
+      "default": { "value": "#2A2A2E", "role": "1px 默认边框、分割线" },
+      "strong":  { "value": "#3D3D42", "role": "2px 强调边框、活跃卡片" },
+      "accent":  { "value": "#FF453A", "role": "强调色边框、焦点、选中" }
+    },
+    "text": {
+      "primary":   { "value": "#FFFFFF", "role": "标题、重要数据" },
+      "secondary": { "value": "#A0A0A8", "role": "正文、标签" },
+      "muted":     { "value": "#6A6A72", "role": "占位符、禁用文字" },
+      "accent":    { "value": "#FF453A", "role": "关键数字、链接" }
+    },
+    "accent": {
+      "primary": { "value": "#FF453A", "role": "核心强调 — 唯一的色彩" },
+      "hover":   { "value": "#FF6B5A", "role": "悬停强调" },
+      "muted":   { "value": "#8B2520", "role": "弱化强调、选中/标签背景" }
+    },
+    "status": {
+      "success": { "value": "#30D158", "role": "已完成、正常状态" },
+      "warning": { "value": "#FF9F0A", "role": "逾期、待处理" },
+      "error":   { "value": "#FF453A", "role": "= accent，与强调色统一" },
+      "info":    { "value": "#64D2FF", "role": "中性提示" }
+    },
+    "threeD": {
+      "face":         { "value": "#1A1A1E", "role": "3D 实体面（平色，无光照）" },
+      "edge":         { "value": "#2A2A2E", "role": "可见边线" },
+      "guide":        { "value": "#3D3D42", "role": "辅助/构造线（虚线）" },
+      "node":         { "value": "#FF453A", "role": "交互节点/关键位置" },
+      "occupied":     { "value": "#FF453A", "role": "已占用区域" },
+      "available":    { "value": "#1A1A1E", "role": "空闲区域" },
+      "maintenance":  { "value": "#FF9F0A", "role": "维修中区域" }
+    },
+    "glass": {
+      "bgSurface":  { "value": "rgba(22, 22, 24, 0.55)", "role": "浮层面板（导航/侧栏/弹窗）" },
+      "bgElevated": { "value": "rgba(30, 30, 34, 0.65)", "role": "浮起层（下拉菜单）" }
+    }
+  },
+
+  "radius": {
+    "none":  { "value": "0px",   "usage": "绝对零圆角 — 极少使用" },
+    "sm":    { "value": "4px",   "usage": "状态指示器、图表柱形/图例方块" },
+    "md":    { "value": "8px",   "usage": "输入框、选择器、Ghost/Text 按钮" },
+    "lg":    { "value": "10px",  "usage": "按钮 (Primary/Secondary/Danger)、Badge" },
+    "xl":    { "value": "12px",  "usage": "卡片、模态框/Dialog" },
+    "full":  { "value": "16px",  "usage": "头像 (Squircle)" }
+  },
+
+  "shadow": {
+    "offsetDefault": { "value": "4px 4px 0px var(--border-hover)", "usage": "标准卡片" },
+    "offsetAccent":  { "value": "4px 4px 0px var(--accent)",       "usage": "强调/焦点卡片" },
+    "offsetHover":   { "value": "6px 6px 0px var(--accent)",       "usage": "悬停态" },
+    "dialog":        { "value": "8px 8px 0px var(--border-hover)", "usage": "模态框大偏移" }
+  },
+
+  "glass": {
+    "blur":       { "value": "24px", "role": "backdrop-filter blur" },
+    "border":     { "value": "1px solid rgba(255, 255, 255, 0.08)", "role": "玻璃边框" },
+    "highlight":  { "value": "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 40%)", "role": "顶部边缘高光" }
+  },
+
+  "typography": {
+    "fontMono": { "value": "'Space Mono', 'Courier New', 'Microsoft YaHei', monospace", "usage": "标题/数据/导航/代码/编号" },
+    "fontSans": { "value": "'Inter', 'Microsoft YaHei', -apple-system, sans-serif",   "usage": "正文/表格/表单/描述" },
+    "size": {
+      "caption":  { "value": "11px", "lineHeight": "1.4", "usage": "标签、编号" },
+      "xs":       { "value": "12px", "lineHeight": "1.5", "usage": "辅助文字" },
+      "sm":       { "value": "13px", "lineHeight": "1.6", "usage": "代码块" },
+      "base":     { "value": "14px", "lineHeight": "1.5", "usage": "表格内容、描述" },
+      "md":       { "value": "15px", "lineHeight": "1.5", "usage": "正文" },
+      "lg":       { "value": "16px", "lineHeight": "1.4", "usage": "卡片标题" },
+      "xl":       { "value": "18px", "lineHeight": "1.3", "usage": "次要数据读数" },
+      "2xl":      { "value": "22px", "lineHeight": "1.3", "usage": "区域标题" },
+      "3xl":      { "value": "28px", "lineHeight": "1.2", "usage": "页面主标题" },
+      "kpi":      { "value": "36px", "lineHeight": "1.1", "usage": "核心指标大字" },
+      "hero":     { "value": "48px", "lineHeight": "1.1", "usage": "Hero 锚点 (可扩展至 120px)" }
+    }
+  },
+
+  "motion": {
+    "duration": {
+      "instant":  { "value": "0ms",   "usage": "颜色/边框状态切换" },
+      "micro":    { "value": "120ms", "usage": "微小位移 (hover 2-4px)" },
+      "normal":   { "value": "240ms", "usage": "模块入场" },
+      "slow":     { "value": "360ms", "usage": "页面过渡、结构线绘制" },
+      "page":     { "value": "480ms", "usage": "数据扫描填充、页面重组" }
+    },
+    "easing": {
+      "pageTransition": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "usage": "路由级页面切换 (v1.1)" }
+    }
+  },
+
+  "spacing": {
+    "xs": { "value": "6px",  "usage": "紧密关联元素、仪表内刻度" },
+    "s":  { "value": "12px", "usage": "列表项内间距、标签间距" },
+    "m":  { "value": "16px", "usage": "卡片内边距、网格间距" },
+    "l":  { "value": "24px", "usage": "区域间距、中央呼吸空间" },
+    "xl": { "value": "48px", "usage": "页面级留白、Hero 周围空间" }
+  },
+
+  "layout": {
+    "grid": { "columns": 12, "gap": "16px" },
+    "sidebar": { "width": "220px", "collapsedWidth": "48px" },
+    "header": { "height": "48px" },
+    "ratios": {
+      "preferred": ["8:4", "6:3:2:1", "5:4:3", "7:5"],
+      "forbidden": ["3:3:3:3", "4:4:4", "6:6"]
+    }
+  },
+
+  "compliance": {
+    "mustUse": [
+      "CSS 变量 token (var(--bg-surface) 不是 #161618)",
+      "Space Mono 用于标题/数据/编号，Inter 用于正文/表格",
+      "0px blur 阴影 (box-shadow 第三个参数永远为 0)",
+      "状态指示器 8×8px 方块 + 文字标签 (色盲友好)"
+    ],
+    "mustNot": [
+      "任意 hex 颜色 (必须通过 token)",
+      "玻璃态用于数据卡片/表格",
+      "模糊阴影 (box-shadow blur > 0)",
+      "圆形状态指示器 (border-radius: 50%)",
+      "渐变用于色块填充",
+      "Spinner 加载动画"
+    ],
+    "resolveConflict": "P0 (系统身份) > P1 (可用性) > P2 (视觉语言) > P3 (装饰)"
+  }
+}

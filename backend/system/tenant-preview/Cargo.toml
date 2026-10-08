@@ -1,0 +1,16 @@
+[package]
+name = "feature-tenant-preview"
+version = "0.1.0"
+edition = "2024"
+description = "Talos read-only tenant preview plane"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+uuid.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"

@@ -1,0 +1,96 @@
+[package]
+name = "talos-backend"
+version = "0.1.0"
+edition = "2024"
+default-run = "talos-backend"
+
+[workspace]
+members = [
+    "system/core",
+    "system/core-derive",
+    "system/notify",
+    "official/logistics",
+    "official/device",
+    "official/order",
+    "official/warehouse",
+    "system/admin",
+    "system/tenant-governance",
+    "system/tenant-preview",
+    "system/tenant-simulation",
+    "thirdparty/sf-express",
+    "thirdparty/wechat-pay",
+    "thirdparty/alipay",
+    "thirdparty/miniapp",
+    "official/finance",
+]
+resolver = "3"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+async-trait = "0.1"
+secrecy = "0.8"
+zeroize = "1"
+scrypt = "0.12"
+aes-gcm = "0.10"
+uuid = { version = "1", features = ["v4"] }
+system-core = { path = "system/core" }
+system-core-derive = { path = "system/core-derive" }
+chrono = { version = "0.4" }
+
+[dependencies]
+axum = { version = "0.8", features = ["macros", "multipart"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs", "limit", "request-id"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+scrypt.workspace = true
+uuid = { version = "1", features = ["v4"] }
+rand = "0.8"
+serde.workspace = true
+serde_json.workspace = true
+system-core.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+calamine = "0.36"
+rust_xlsxwriter = "0.79"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0.103"
+thiserror = "2"
+async-trait.workspace = true
+secrecy.workspace = true
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+sentry = { version = "0.36", default-features = false, features = ["backtrace", "contexts", "panic", "transport"] }
+reqwest = { version = "0.12", features = ["cookies", "json", "rustls-tls"], default-features = false }
+url = "2"
+official-logistics = { path = "official/logistics" }
+official-device = { path = "official/device" }
+official-order = { path = "official/order" }
+official-warehouse = { path = "official/warehouse" }
+system-admin = { path = "system/admin" }
+feature-tenant-governance = { path = "system/tenant-governance" }
+feature-tenant-preview = { path = "system/tenant-preview" }
+feature-tenant-simulation = { path = "system/tenant-simulation" }
+thirdparty-sf-express = { path = "thirdparty/sf-express" }
+thirdparty-wechat-pay = { path = "thirdparty/wechat-pay" }
+thirdparty-alipay = { path = "thirdparty/alipay" }
+thirdparty-miniapp = { path = "thirdparty/miniapp" }
+system-notify = { path = "system/notify" }
+official-finance = { path = "official/finance" }
+regex = "1"
+hex = "0.4"
+sha2 = "0.10"
+hmac = "0.12"
+aes-gcm.workspace = true
+zeroize.workspace = true
+subtle = "2"
+ipnet = "2"
+sqlx = { version = "0.8", optional = true, default-features = false }
+
+[features]
+default = ["sqlite"]
+sqlite = ["sqlx/sqlite", "sqlx/runtime-tokio"]
+postgres = ["sqlx/postgres", "sqlx/runtime-tokio", "feature-tenant-simulation/postgres"]

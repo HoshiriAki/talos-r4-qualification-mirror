@@ -1,0 +1,16 @@
+[package]
+name = "official-warehouse"
+version = "0.1.0"
+edition = "2024"
+description = "仓库管理 — 仓库 CRUD + 高级仓储（库存预警/设备调拨）"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+chrono.workspace = true
+uuid.workspace = true

@@ -1,0 +1,281 @@
+{
+  "$schema": "https://talos-erp.internal/design-system/v1.1/component-grammar.schema.json",
+  "version": "1.1",
+  "name": "Industrial Avant UI — Component Grammar Registry",
+  "description": "Complete component rules for AI code generation. Each component has tokens, rules, states, and a forbidden list. Source: industrial-avant-ui-complete.md v1.1.",
+
+  "priority": {
+    "order": ["P0", "P1", "P2", "P3"],
+    "P0": { "label": "System Identity", "rule": "Never violate — industrial geometry, limited color, module numbering, AI as system layer" },
+    "P1": { "label": "Usability", "rule": "Overrides visual purity — accessibility, readability, touch targets ≥44px, reduced-motion" },
+    "P2": { "label": "Visual Language", "rule": "Layout tension, typography, motion, material" },
+    "P3": { "label": "Decoration", "rule": "Background effects, optional atmosphere, promotional visuals" }
+  },
+
+  "components": {
+    "IndustrialCard": {
+      "purpose": "Information container — the primary building block of all pages",
+      "variants": {
+        "standard": {
+          "tokens": {
+            "background": "var(--bg-surface)",
+            "border": "1px solid var(--border-default)",
+            "borderRadius": "var(--radius-xl)",
+            "boxShadow": "var(--shadow-offset-default)",
+            "padding": "20px"
+          },
+          "structure": ["Header(MODULE-ID + Title + Action)", "Divider(1px border-default)", "Content"]
+        },
+        "emphasis": {
+          "tokens": {
+            "background": "var(--bg-surface)",
+            "border": "2px solid var(--border-hover)",
+            "borderRadius": "var(--radius-xl)",
+            "boxShadow": "var(--shadow-offset-accent)",
+            "padding": "20px",
+            "optionalDecor": "left-accent-bar: 3px solid var(--accent)"
+          }
+        },
+        "focus": {
+          "tokens": {
+            "background": "var(--bg-elevated)",
+            "border": "2px solid var(--accent)",
+            "borderRadius": "var(--radius-xl)",
+            "boxShadow": "var(--shadow-offset-accent)",
+            "padding": "24px"
+          }
+        },
+        "alert": {
+          "tokens": {
+            "background": "var(--bg-surface)",
+            "border": "2px solid var(--status-warning)",
+            "borderRadius": "var(--radius-xl)",
+            "boxShadow": "var(--shadow-offset-default)",
+            "padding": "20px",
+            "decor": "diagonal-stripe-corner: var(--stripe-light) / var(--stripe-dark)"
+          }
+        }
+      },
+      "forbidden": ["glass-bg", "backdrop-filter", "no-border", "blurred-box-shadow", "gradient-background", "raw-hex-colors"],
+      "rules": ["Always opaque bg-surface — never glass", "Card hover: border → border-hover, shadow offset stays"]
+    },
+
+    "Button": {
+      "purpose": "User action trigger",
+      "variants": {
+        "primary": {
+          "tokens": {
+            "background": "var(--accent)",
+            "color": "#FFFFFF",
+            "border": "2px solid var(--accent)",
+            "borderRadius": "var(--radius-lg)",
+            "fontFamily": "var(--font-mono)",
+            "fontWeight": "600",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.05em",
+            "height": "36px",
+            "paddingX": "20px",
+            "boxShadow": "var(--shadow-offset-accent)"
+          },
+          "hover": { "background": "var(--accent-hover)", "borderColor": "var(--accent-hover)" },
+          "active": { "transform": "translateY(2px)" }
+        },
+        "secondary": {
+          "tokens": {
+            "background": "transparent",
+            "color": "var(--text-primary)",
+            "border": "2px solid var(--border-default)",
+            "borderRadius": "var(--radius-lg)",
+            "fontFamily": "var(--font-mono)",
+            "fontWeight": "600",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.05em",
+            "height": "36px",
+            "paddingX": "20px",
+            "boxShadow": "var(--shadow-offset-default)"
+          },
+          "hover": { "borderColor": "var(--accent)" },
+          "active": { "transform": "translateY(2px)" }
+        },
+        "danger": {
+          "tokens": {
+            "background": "var(--accent-muted)",
+            "color": "var(--accent-hover)",
+            "border": "2px solid var(--accent)",
+            "borderRadius": "var(--radius-lg)",
+            "fontFamily": "var(--font-mono)",
+            "fontWeight": "600",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.05em",
+            "height": "36px",
+            "paddingX": "20px",
+            "decor": "diagonal-stripe-corner"
+          }
+        },
+        "ghost": {
+          "tokens": {
+            "background": "transparent",
+            "color": "var(--text-secondary)",
+            "border": "none",
+            "borderRadius": "var(--radius-md)",
+            "fontFamily": "var(--font-mono)",
+            "fontSize": "var(--font-size-sm)",
+            "paddingX": "12px",
+            "paddingY": "6px"
+          },
+          "hover": { "color": "var(--text-primary)", "background": "var(--bg-elevated)", "textDecoration": "underline" }
+        }
+      },
+      "sizes": {
+        "default": { "height": "36px", "paddingX": "20px", "fontSize": "14px" },
+        "small":   { "height": "32px", "paddingX": "16px", "fontSize": "12px" },
+        "large":   { "height": "44px", "paddingX": "28px", "fontSize": "16px" }
+      },
+      "forbidden": ["raw-hex-bg", "no-border-except-ghost", "blurred-shadow", "radius-not-10px"],
+      "accessibility": { "minTouchTarget": "44×44px", "focusRing": "2px solid var(--accent)" }
+    },
+
+    "Input": {
+      "purpose": "User text entry",
+      "states": {
+        "default":  { "border": "1px solid var(--border-default)", "background": "var(--bg-field)", "borderRadius": "var(--radius-md)", "height": "38px", "paddingX": "12px", "fontFamily": "var(--font-sans)" },
+        "focus":    { "border": "2px solid var(--accent)" },
+        "error":    { "border": "2px solid var(--status-error)", "belowText": "error message, font-sans, 12px, status-error color" },
+        "disabled": { "opacity": "0.35" }
+      },
+      "variants": {
+        "mono": { "fontFamily": "var(--font-mono)", "usage": "codes, serial numbers, IDs" },
+        "textarea": { "resize": "vertical", "minHeight": "60px" }
+      },
+      "forbidden": ["rounded-input (radius=0)", "font-mono for body text inputs"]
+    },
+
+    "Select": {
+      "purpose": "Dropdown selection",
+      "tokens": {
+        "border": "1px solid var(--border-default)",
+        "background": "var(--bg-field)",
+        "borderRadius": "var(--radius-md)",
+        "height": "38px",
+        "paddingX": "12px",
+        "fontFamily": "var(--font-mono)",
+        "fontSize": "13px"
+      },
+      "states": {
+        "focus": { "border": "2px solid var(--accent)" }
+      },
+      "forbidden": ["custom-styled-appearance (use PrimeVue Select)", "radius-not-8px"]
+    },
+
+    "StatusIndicator": {
+      "purpose": "Discrete state display — color-blind accessible",
+      "size": "8×8px",
+      "borderRadius": "var(--radius-sm)",
+      "variants": {
+        "success":  { "fill": "var(--status-success)", "style": "solid", "label": "已完成" },
+        "warning":  { "fill": "var(--status-warning)", "style": "half-fill", "label": "进行中" },
+        "pending":  { "fill": "var(--text-muted)", "style": "hollow-border", "label": "待处理" },
+        "error":    { "fill": "var(--status-error)", "style": "solid+stripes", "label": "已逾期" },
+        "cancelled":{ "fill": "var(--text-muted)", "style": "hollow+x", "label": "已取消" }
+      },
+      "mandatory": "ALWAYS pair with text label. NEVER rely on color alone.",
+      "forbidden": ["border-radius: 50%", "unlabeled color-only dot", "custom status colors outside token set"]
+    },
+
+    "DataTable": {
+      "purpose": "Tabular data display",
+      "tokens": {
+        "headerBg": "var(--bg-elevated)",
+        "headerFont": "var(--font-mono)",
+        "headerSize": "var(--font-size-xs)",
+        "headerWeight": "700",
+        "headerColor": "var(--text-secondary)",
+        "headerTransform": "uppercase",
+        "bodyFont": "var(--font-sans)",
+        "bodySize": "var(--font-size-base)",
+        "rowBorder": "1px solid var(--border-default)",
+        "stripeOdd": "var(--bg-surface)",
+        "stripeEven": "var(--bg-base)",
+        "hoverBg": "var(--bg-elevated)",
+        "columnDividers": "none (align text instead)"
+      },
+      "forbidden": ["vertical column dividers", "glass background", "serif fonts", "header without uppercase"]
+    },
+
+    "Dialog_Modal": {
+      "purpose": "Floating temporary surface — glass allowed here",
+      "tokens": {
+        "background": "var(--glass-bg)",
+        "backdropFilter": "blur(var(--glass-blur))",
+        "border": "var(--glass-border)",
+        "borderRadius": "var(--radius-xl)",
+        "boxShadow": "8px 8px 0px var(--border-hover)",
+        "edgeHighlight": "1px var(--glass-highlight) at top edge"
+      },
+      "structure": ["Header(font-mono, 700, 15px, pad: 1rem)", "Content(font-sans, pad: 1.25rem)", "Footer(font-mono buttons, pad: 0.75rem)"],
+      "mask": "rgba(0,0,0,0.55) + backdrop-filter: blur(4px)",
+      "forbidden": ["opaque background on dialog mask", "blurred box-shadow on dialog panel", "radius ≠ 12px"]
+    },
+
+    "AINode": {
+      "purpose": "AI system state indicator — represents intelligence as infrastructure, not chatbot",
+      "visual": "Square node, accent color, industrial scan/pipeline animation",
+      "states": {
+        "idle":       { "visual": "dark square node, border: 1px var(--border-default)" },
+        "processing": { "visual": "scan line animation across node (stroke-dashoffset, accent color)" },
+        "thinking":   { "visual": "data pipeline flow animation (orthogonal pipe, accent pulse)" },
+        "completed":  { "visual": "solid accent fill, locked state" }
+      },
+      "forbidden": ["chat-bubble", "cartoon-robot-icon", "magic-glow-gradient", "pulsing-orb", "sparkle-emoji"]
+    }
+  },
+
+  "layout": {
+    "grid": { "columns": 12, "gap": "16px", "ratios": { "allowed": ["8:4", "6:3:2:1", "5:4:3", "7:5"], "forbidden": ["3:3:3:3", "4:4:4", "6:6"] } },
+    "sidebar": { "width": "220px", "collapsed": "48px", "material": "glass", "activeIndicator": "3px left accent bar" },
+    "header": { "height": "48px", "material": "glass-pill-container", "activeTab": "solid-inverted-fill" },
+    "pageRequirements": ["MODULE-NN", "structure-line", "hero-anchor", "50-70% whitespace", "version-footer"]
+  },
+
+  "loading": {
+    "description": "Five industrial loading animations. NEVER use a spinner.",
+    "types": {
+      "cadLoading":       { "duration": "600ms", "sequence": "wireframe → stroke → fill → number → data", "usage": "page first load" },
+      "wireframeLoading": { "duration": "480ms", "sequence": "construction-lines → complete-wireframe → solid-face", "usage": "3D/chart loading" },
+      "assemblyLoading":  { "duration": "720ms", "sequence": "moduleA → pause(120ms) → moduleB → pause → moduleC", "usage": "dashboard" },
+      "scanLoading":      { "duration": "360ms", "sequence": "horizontal scan line sweeps top→bottom", "usage": "table/list loading" },
+      "pipelineLoading":  { "duration": "480ms", "sequence": "data-packets flow along orthogonal pipes → activate card", "usage": "search/filter" }
+    },
+    "forbidden": ["spinner", "circular-progress-indeterminate", "pulsing-dots", "skeleton-screen-without-industrial-frame"]
+  },
+
+  "motion": {
+    "microInteraction": { "sequence": ["number-color-change(0ms)", "border-change(0ms)", "translate(120ms, 2-3px, orthogonal)", "info-reveal(240ms)"], "noEasing": true },
+    "pageTransition": { "duration": "360ms", "style": "fade + translateX(48px)", "easing": "cubic-bezier(0.4, 0, 0.2, 1)", "note": "v1.1 relaxation — pure orthogonal mask was v1.0" },
+    "accessibility": "prefers-reduced-motion: all animations → 0ms"
+  },
+
+  "globalChecklist": {
+    "must": [
+      "CSS variables for ALL colors",
+      "Space Mono for structural text (titles, data, nav, IDs)",
+      "Inter for reading text (body, tables, forms, descriptions)",
+      "8×8px status squares + text labels (color-blind accessible)",
+      "focus-visible: 2px accent outline on all interactive elements",
+      "prefers-reduced-motion: 0ms",
+      "MODULE-NN on every page"
+    ],
+    "mustNot": [
+      "Raw hex colors in component code",
+      "Glass/backdrop-filter on data cards or tables",
+      "Blurred box-shadow (3rd param > 0)",
+      "border-radius: 50%",
+      "Gradients on solid color fills",
+      "Spinner loading animations",
+      "Curved motion paths (except page transition fade+slide)",
+      "Equal grid ratios (3:3:3:3, 6:6)",
+      "Emoji as icons",
+      "Decorative colors without structural purpose"
+    ]
+  }
+}

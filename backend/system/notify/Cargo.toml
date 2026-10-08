@@ -1,0 +1,18 @@
+[package]
+name = "system-notify"
+version = "0.1.0"
+edition = "2024"
+description = "通知系统 — 多通道 (email/SMS/站内信) + 事件驱动 + 模板引擎"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+uuid.workspace = true
+chrono = { version = "0.4" }
+chrono-tz = "0.10"
+tracing = "0.1"

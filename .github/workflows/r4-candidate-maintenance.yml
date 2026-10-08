@@ -1,0 +1,60 @@
+name: TALOS / R4 / Candidate Maintenance
+
+on:
+  pull_request:
+    branches:
+      - prototype
+    types:
+      - labeled
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: talos-r4-candidate-maintenance-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  rustfmt:
+    name: Rustfmt repair
+    if: >-
+      github.event.label.name == 'ci:rustfmt-repair' &&
+      github.event.pull_request.draft == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'agent/r4-p')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR head branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable pinned 2026-09-12
+        with:
+          components: rustfmt
+
+      - name: Apply rustfmt
+        working-directory: backend
+        run: cargo fmt --all
+
+      - name: Commit formatting only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'TALOS R4 Candidate Maintenance'
+          git config user.email '99823866+HoshiriAki@users.noreply.github.com'
+          git add backend
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No rustfmt changes required.'
+            exit 0
+          fi
+          git commit -m 'style(r4): apply rustfmt to candidate'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

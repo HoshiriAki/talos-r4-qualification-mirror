@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "entries": [
+    {
+      "branch_prefix": "agent/r4-p10-sp01-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp01-backup-artifact-contract.test.mjs",
+        "scripts/check-r4-p10-sp01-backup-artifact-contract.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp01-backup-artifact-contract.sh",
+      "label": "p10-sp01-backup-artifact"
+    }
+  ]
+}

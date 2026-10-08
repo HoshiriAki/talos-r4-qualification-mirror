@@ -1,0 +1,8 @@
+[dsn]
+url = "https://examplePublicKey@o0.ingest.sentry.io/0"
+
+[release]
+name = "talos-backend@0.1.0"
+
+[traces]
+sample_rate = 0.1

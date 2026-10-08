@@ -1,0 +1,342 @@
+name: TALOS Repository Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talos-preflight-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Repository preflight
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 10
+
+    steps:
+      - name: Restore Git and shell bootstrap
+        shell: cmd
+        run: |
+          if not exist "D:\git-sdk-64-minimal\mingw64\bin\git.exe" exit /b 1
+          if not exist "D:\git-sdk-64-minimal\usr\bin\bash.exe" exit /b 1
+          git config --global --add safe.directory "%GITHUB_WORKSPACE%"
+          echo D:\git-sdk-64-minimal\usr\bin>>"%GITHUB_PATH%"
+          echo D:\git-sdk-64-minimal\mingw64\bin>>"%GITHUB_PATH%"
+
+      - name: Try exact smart-HTTP checkout
+        id: smart_checkout
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          show-progress: false
+          clean: true
+          persist-credentials: false
+
+      - name: Validate smart-HTTP source identity
+        id: smart_identity
+        if: github.event_name == 'pull_request' && steps.smart_checkout.outcome == 'success'
+        continue-on-error: true
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+        env:
+          SOURCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TALOS_OPS_BASELINE_SHA: 5cf781fb69cf898a9be0530099724e62c134b031
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $git = 'D:\git-sdk-64-minimal\mingw64\bin\git.exe'
+          Push-Location $env:GITHUB_WORKSPACE
+          try {
+            $actualHead = (& $git rev-parse HEAD).Trim()
+            if ($LASTEXITCODE -ne 0 -or $actualHead -ne $env:SOURCE_HEAD_SHA) {
+              throw "smart-HTTP head mismatch: expected $env:SOURCE_HEAD_SHA, got $actualHead"
+            }
+
+            & $git cat-file -e "$env:SOURCE_BASE_SHA`^{commit}"
+            if ($LASTEXITCODE -ne 0) { throw 'smart-HTTP checkout does not contain exact event base commit' }
+            & $git cat-file -e "$env:TALOS_OPS_BASELINE_SHA`^{commit}"
+            if ($LASTEXITCODE -ne 0) { throw 'smart-HTTP checkout does not contain fingerprint baseline commit' }
+
+            $baselinePaths = @(& $git ls-tree -r --name-only $env:TALOS_OPS_BASELINE_SHA -- backend frontend/src)
+            if ($LASTEXITCODE -ne 0 -or $baselinePaths.Count -eq 0) {
+              throw 'smart-HTTP fingerprint baseline tree is not readable'
+            }
+
+            & $git update-ref refs/remotes/origin/prototype $env:SOURCE_BASE_SHA
+            if ($LASTEXITCODE -ne 0) { throw 'failed to pin origin/prototype to exact event base' }
+
+            Set-Content -LiteralPath '.git\talos-source-base' -Value $env:SOURCE_BASE_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-head' -Value $env:SOURCE_HEAD_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-baseline' -Value $env:TALOS_OPS_BASELINE_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-baseline-local-commit' -Value $env:TALOS_OPS_BASELINE_SHA -NoNewline
+            "TALOS_OPS_BASELINE_SHA=$env:TALOS_OPS_BASELINE_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "TALOS_OPS_BASELINE_LOCAL_COMMIT=$env:TALOS_OPS_BASELINE_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            'SOURCE_MATERIALIZATION_MODE=smart-http' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+            Write-Host "Source materialization: smart-http"
+            Write-Host "Source base SHA: $env:SOURCE_BASE_SHA"
+            Write-Host "Source head SHA: $actualHead"
+            Write-Host "Fingerprint baseline authority/local SHA: $env:TALOS_OPS_BASELINE_SHA"
+          } finally {
+            Pop-Location
+          }
+
+      - name: Download exact PR and fingerprint baseline archives
+        if: github.event_name == 'pull_request' && (steps.smart_checkout.outcome != 'success' || steps.smart_identity.outcome != 'success')
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          NODE_OPTIONS: --use-system-ca
+        with:
+          retries: 3
+          script: |
+            const fs = require('fs')
+            const path = require('path')
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const baselineSha = '5cf781fb69cf898a9be0530099724e62c134b031'
+            for (const [name, sha] of [
+              ['base', context.payload.pull_request.base.sha],
+              ['head', context.payload.pull_request.head.sha],
+              ['baseline', baselineSha],
+            ]) {
+              const response = await github.request('GET /repos/{owner}/{repo}/zipball/{ref}', {
+                owner, repo, ref: sha,
+                request: { parseSuccessResponseBody: false },
+              })
+              const reader = response.data.getReader()
+              const chunks = []
+              for (;;) {
+                const { done, value } = await reader.read()
+                if (done) break
+                chunks.push(Buffer.from(value))
+              }
+              const buffer = Buffer.concat(chunks)
+              const target = path.join(process.env.RUNNER_TEMP, `talos-${name}.zip`)
+              fs.writeFileSync(target, buffer)
+              core.info(`${name} ${sha} ${buffer.length} bytes`)
+            }
+
+      - name: Materialize exact PR source and fingerprint baseline from archives
+        if: github.event_name == 'pull_request' && (steps.smart_checkout.outcome != 'success' || steps.smart_identity.outcome != 'success')
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+        env:
+          SOURCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TALOS_OPS_BASELINE_SHA: 5cf781fb69cf898a9be0530099724e62c134b031
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $nativeTar = Join-Path $env:SystemRoot 'System32\tar.exe'
+          $git = 'D:\git-sdk-64-minimal\mingw64\bin\git.exe'
+          $baseZip = Join-Path $env:RUNNER_TEMP 'talos-base.zip'
+          $headZip = Join-Path $env:RUNNER_TEMP 'talos-head.zip'
+          $baselineZip = Join-Path $env:RUNNER_TEMP 'talos-baseline.zip'
+          $baseExtract = Join-Path $env:RUNNER_TEMP 'talos-base-source'
+          $headExtract = Join-Path $env:RUNNER_TEMP 'talos-head-source'
+          $baselineExtract = Join-Path $env:RUNNER_TEMP 'talos-baseline-source'
+
+          foreach ($directory in @($baseExtract, $headExtract, $baselineExtract)) {
+            if (Test-Path -LiteralPath $directory) { Remove-Item -LiteralPath $directory -Recurse -Force }
+            New-Item -ItemType Directory -Path $directory | Out-Null
+          }
+
+          & $nativeTar -xf $baseZip -C $baseExtract
+          if ($LASTEXITCODE -ne 0) { throw 'base archive extraction failed' }
+          & $nativeTar -xf $headZip -C $headExtract
+          if ($LASTEXITCODE -ne 0) { throw 'head archive extraction failed' }
+          & $nativeTar -xf $baselineZip -C $baselineExtract
+          if ($LASTEXITCODE -ne 0) { throw 'fingerprint baseline archive extraction failed' }
+
+          $baseRoots = @(Get-ChildItem -LiteralPath $baseExtract -Directory)
+          $headRoots = @(Get-ChildItem -LiteralPath $headExtract -Directory)
+          $baselineRoots = @(Get-ChildItem -LiteralPath $baselineExtract -Directory)
+          if ($baseRoots.Count -ne 1 -or $headRoots.Count -ne 1 -or $baselineRoots.Count -ne 1) { throw 'archive root count mismatch' }
+          if ($baseRoots[0].Name -notlike "*$($env:SOURCE_BASE_SHA.Substring(0,7))*") { throw 'base archive identity mismatch' }
+          if ($headRoots[0].Name -notlike "*$($env:SOURCE_HEAD_SHA.Substring(0,7))*") { throw 'head archive identity mismatch' }
+          if ($baselineRoots[0].Name -notlike "*$($env:TALOS_OPS_BASELINE_SHA.Substring(0,7))*") { throw 'fingerprint baseline archive identity mismatch' }
+
+          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+          $null = robocopy $baseRoots[0].FullName $env:GITHUB_WORKSPACE /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { throw "base copy failed: $LASTEXITCODE" }
+
+          & $git init $env:GITHUB_WORKSPACE
+          if ($LASTEXITCODE -ne 0) { throw 'git init failed' }
+          Push-Location $env:GITHUB_WORKSPACE
+          try {
+            & $git config user.name 'TALOS Verification'
+            & $git config user.email 'verification@talos.invalid'
+            & $git config core.longpaths true
+            & $git config core.autocrlf false
+            & $git add -A
+            & $git commit --no-gpg-sign --allow-empty -m "synthetic base $env:SOURCE_BASE_SHA"
+            if ($LASTEXITCODE -ne 0) { throw 'synthetic base commit failed' }
+            $syntheticBase = (& $git rev-parse HEAD).Trim()
+            & $git update-ref refs/remotes/origin/prototype $syntheticBase
+
+            Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force | Where-Object Name -ne '.git' | Remove-Item -Recurse -Force
+            $null = robocopy $headRoots[0].FullName $env:GITHUB_WORKSPACE /E /NFL /NDL /NJH /NJS /NP
+            if ($LASTEXITCODE -ge 8) { throw "head copy failed: $LASTEXITCODE" }
+            & $git add -A
+            & $git commit --no-gpg-sign --allow-empty -m "synthetic head $env:SOURCE_HEAD_SHA"
+            if ($LASTEXITCODE -ne 0) { throw 'synthetic head commit failed' }
+            $syntheticHead = (& $git rev-parse HEAD).Trim()
+
+            Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force | Where-Object Name -ne '.git' | Remove-Item -Recurse -Force
+            $null = robocopy $baselineRoots[0].FullName $env:GITHUB_WORKSPACE /E /NFL /NDL /NJH /NJS /NP
+            if ($LASTEXITCODE -ge 8) { throw "fingerprint baseline copy failed: $LASTEXITCODE" }
+            & $git add -A
+            & $git commit --no-gpg-sign --allow-empty -m "synthetic fingerprint baseline $env:TALOS_OPS_BASELINE_SHA"
+            if ($LASTEXITCODE -ne 0) { throw 'synthetic fingerprint baseline commit failed' }
+            $syntheticBaseline = (& $git rev-parse HEAD).Trim()
+
+            & $git reset --hard $syntheticHead
+            if ($LASTEXITCODE -ne 0) { throw 'restore synthetic head failed' }
+            & $git cat-file -e "$syntheticBaseline`^{commit}"
+            if ($LASTEXITCODE -ne 0) { throw 'fingerprint baseline projection is not commit-readable' }
+            $baselinePaths = @(& $git ls-tree -r --name-only $syntheticBaseline -- backend frontend/src)
+            if ($LASTEXITCODE -ne 0 -or $baselinePaths.Count -eq 0) { throw 'fingerprint baseline projection tree is not readable' }
+
+            Set-Content -LiteralPath '.git\talos-source-base' -Value $env:SOURCE_BASE_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-head' -Value $env:SOURCE_HEAD_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-baseline' -Value $env:TALOS_OPS_BASELINE_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-baseline-local-commit' -Value $syntheticBaseline -NoNewline
+            "TALOS_OPS_BASELINE_SHA=$env:TALOS_OPS_BASELINE_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "TALOS_OPS_BASELINE_LOCAL_COMMIT=$syntheticBaseline" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            'SOURCE_MATERIALIZATION_MODE=archive-fallback' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host 'Source materialization: archive-fallback'
+            Write-Host "Source base SHA: $env:SOURCE_BASE_SHA"
+            Write-Host "Source head SHA: $env:SOURCE_HEAD_SHA"
+            Write-Host "Fingerprint baseline authority SHA: $env:TALOS_OPS_BASELINE_SHA"
+            Write-Host "Synthetic base: $syntheticBase"
+            Write-Host "Synthetic head: $syntheticHead"
+            Write-Host "Fingerprint baseline local projection: $syntheticBaseline"
+          } finally {
+            Pop-Location
+          }
+
+      - name: Checkout workflow-dispatch source
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          show-progress: false
+          persist-credentials: false
+
+      - name: Initialize workflow-dispatch source identity
+        if: github.event_name != 'pull_request'
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+        env:
+          SOURCE_HEAD_SHA: ${{ github.sha }}
+          TALOS_OPS_BASELINE_SHA: 5cf781fb69cf898a9be0530099724e62c134b031
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $git = 'D:\git-sdk-64-minimal\mingw64\bin\git.exe'
+          Push-Location $env:GITHUB_WORKSPACE
+          try {
+            $actualHead = (& $git rev-parse HEAD).Trim()
+            if ($LASTEXITCODE -ne 0 -or $actualHead -ne $env:SOURCE_HEAD_SHA) { throw 'workflow-dispatch head mismatch' }
+            & $git cat-file -e "$env:TALOS_OPS_BASELINE_SHA`^{commit}"
+            if ($LASTEXITCODE -ne 0) { throw 'workflow-dispatch checkout does not contain fingerprint baseline commit' }
+
+            Set-Content -LiteralPath '.git\talos-source-base' -Value $env:SOURCE_HEAD_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-head' -Value $env:SOURCE_HEAD_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-source-baseline' -Value $env:TALOS_OPS_BASELINE_SHA -NoNewline
+            Set-Content -LiteralPath '.git\talos-baseline-local-commit' -Value $env:TALOS_OPS_BASELINE_SHA -NoNewline
+            "TALOS_OPS_BASELINE_SHA=$env:TALOS_OPS_BASELINE_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "TALOS_OPS_BASELINE_LOCAL_COMMIT=$env:TALOS_OPS_BASELINE_SHA" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            'SOURCE_MATERIALIZATION_MODE=smart-http-dispatch' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } finally {
+            Pop-Location
+          }
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust GNU toolchain
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: stable-x86_64-pc-windows-gnu
+
+      - name: Verify lightweight toolchain and source identity
+        shell: cmd
+        run: |
+          node --version
+          pnpm --version
+          cargo --version
+          type .git\talos-source-base
+          type .git\talos-source-head
+          type .git\talos-source-baseline
+          type .git\talos-baseline-local-commit
+          echo Materialization mode: %SOURCE_MATERIALIZATION_MODE%
+          echo Baseline authority: %TALOS_OPS_BASELINE_SHA%
+          echo Baseline local projection: %TALOS_OPS_BASELINE_LOCAL_COMMIT%
+
+      - name: Validate R4 supply-chain provenance policy
+        shell: cmd
+        run: |
+          node scripts/r4-build-provenance.test.mjs
+          node scripts/check-r4-supply-chain-provenance.test.mjs
+          node scripts/check-r4-supply-chain-provenance.mjs
+
+      - name: Run authoritative dependency-install-free repository preflight
+        id: authoritative_preflight
+        continue-on-error: true
+        shell: cmd
+        run: |
+          pnpm validate:preflight > preflight-authoritative.log 2>&1
+          set PREFLIGHT_EXIT=%ERRORLEVEL%
+          type preflight-authoritative.log
+          exit /b %PREFLIGHT_EXIT%
+
+      - name: Upload authoritative preflight failure report
+        if: steps.authoritative_preflight.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: preflight-authoritative-report
+          path: preflight-authoritative.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Verify Cargo lockfile consistency without compiling
+        if: steps.authoritative_preflight.outcome == 'success'
+        shell: cmd
+        run: cargo metadata --manifest-path backend/Cargo.toml --locked --no-deps >nul
+
+      - name: Require authoritative repository preflight
+        if: always()
+        shell: cmd
+        run: if not "${{ steps.authoritative_preflight.outcome }}"=="success" exit /b 1
+
+      - name: Check diff whitespace
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check origin/prototype...HEAD > diff-whitespace-check.log 2>&1
+          set DIFF_EXIT=%ERRORLEVEL%
+          type diff-whitespace-check.log
+          exit /b %DIFF_EXIT%
+
+      - name: Upload diff whitespace failure report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: preflight-diff-whitespace-report
+          path: diff-whitespace-check.log
+          if-no-files-found: error
+          retention-days: 3

@@ -1,0 +1,381 @@
+name: TALOS Repository Quality
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talos-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  CARGO_BUILD_JOBS: '2'
+  RUST_TEST_THREADS: '2'
+  RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-msvc
+
+jobs:
+  frontend-and-repository:
+    name: Frontend, Registry, repository and dependency audit
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 35
+
+    steps:
+      - name: Restore Git and shell bootstrap
+        shell: cmd
+        run: |
+          if not exist "D:\git-sdk-64-minimal\mingw64\bin\git.exe" exit /b 1
+          if not exist "D:\git-sdk-64-minimal\usr\bin\bash.exe" exit /b 1
+          git config --global --add safe.directory "%GITHUB_WORKSPACE%"
+          echo D:\git-sdk-64-minimal\usr\bin>>"%GITHUB_PATH%"
+          echo D:\git-sdk-64-minimal\mingw64\bin>>"%GITHUB_PATH%"
+
+      - name: Enable Windows long paths
+        shell: cmd
+        run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify preinstalled Rust MSVC toolchain
+        shell: cmd
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
+
+      - name: Verify Node toolchain
+        shell: cmd
+        run: |
+          node --version
+          pnpm --version
+
+      - name: Install frozen dependencies
+        shell: cmd
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Validate runtime supervisor syntax
+        shell: cmd
+        run: node --check scripts/start-supervisor.mjs
+
+      - name: Warm Windows Rust toolchain for Runtime Doctor
+        shell: cmd
+        run: |
+          rustc --version
+          cargo --version
+
+      - name: Run runtime doctor through start.cmd
+        shell: cmd
+        run: start.cmd doctor --ci
+
+      - name: Smoke runtime diagnostic generation
+        shell: cmd
+        run: |
+          call start.cmd diagnose --no-archive --log-root .talos-runtime\ci\runtime-diagnostics
+          if not exist ".talos-runtime\ci\runtime-diagnostics\latest.json" exit /b 1
+          set /p RUNTIME_SESSION=<.talos-runtime\ci\runtime-diagnostics\latest.txt
+          if not exist "%RUNTIME_SESSION%\runtime.json" exit /b 1
+          dir /s /b "%RUNTIME_SESSION%\diagnostics\supervisor-node-report.json" >nul 2>nul
+          if errorlevel 1 exit /b 1
+          rmdir /s /q ".talos-runtime\ci\runtime-diagnostics"
+
+      - name: Validate agent test launcher syntax
+        shell: cmd
+        run: node --check scripts/agent-test-session.mjs
+
+      - name: Validate CI execution policy
+        shell: cmd
+        run: |
+          call pnpm quality:ci-policy:test
+          call pnpm quality:ci-policy
+
+      - name: Validate R4 supply-chain provenance policy
+        shell: cmd
+        run: |
+          node scripts/r4-build-provenance.test.mjs
+          node scripts/check-r4-supply-chain-provenance.test.mjs
+          node scripts/check-r4-supply-chain-provenance.mjs
+
+      - name: Validate repository layout
+        shell: cmd
+        run: |
+          call pnpm quality:layout > repository-layout-check.log 2>&1
+          set LAYOUT_EXIT=%ERRORLEVEL%
+          type repository-layout-check.log
+          exit /b %LAYOUT_EXIT%
+
+      - name: Upload repository layout failure report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: repository-layout-check-report
+          path: repository-layout-check.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Validate TALOS Operations boundaries
+        shell: cmd
+        run: |
+          call pnpm quality:talos-ops > talos-ops-boundary-check.log 2>&1
+          set TALOS_OPS_EXIT=%ERRORLEVEL%
+          type talos-ops-boundary-check.log
+          exit /b %TALOS_OPS_EXIT%
+
+      - name: Upload TALOS Operations boundary failure report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: talos-ops-boundary-check-report
+          path: talos-ops-boundary-check.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Validate component Registry
+        shell: cmd
+        run: pnpm --dir frontend ui:registry:check
+
+      - name: Typecheck frontend
+        shell: cmd
+        run: pnpm --dir frontend typecheck
+
+      - name: Build frontend
+        shell: cmd
+        run: pnpm --dir frontend build
+
+      - name: Audit production JavaScript dependencies
+        shell: cmd
+        run: pnpm audit --prod --audit-level high
+
+      - name: Check diff whitespace
+        if: always()
+        shell: cmd
+        run: git diff --check origin/prototype...HEAD
+
+  rust_tests:
+    name: Rust workspace check and tests
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: backend
+        shell: cmd
+
+    steps:
+      - name: Restore Git and shell bootstrap
+        working-directory: .
+        run: |
+          if not exist "D:\git-sdk-64-minimal\mingw64\bin\git.exe" exit /b 1
+          if not exist "D:\git-sdk-64-minimal\usr\bin\bash.exe" exit /b 1
+          git config --global --add safe.directory "%GITHUB_WORKSPACE%"
+          echo D:\git-sdk-64-minimal\usr\bin>>"%GITHUB_PATH%"
+          echo D:\git-sdk-64-minimal\mingw64\bin>>"%GITHUB_PATH%"
+
+      - name: Enable Windows long paths
+        working-directory: .
+        run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify preinstalled Rust MSVC toolchain
+        shell: cmd
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
+
+      - name: Restore Rust test cache
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: backend -> target
+          shared-key: windows-msvc-default-tests
+          cache-bin: false
+          cache-on-failure: false
+          save-if: false
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check workspace
+        run: cargo check --workspace --locked
+
+      - name: Test workspace
+        run: cargo test --workspace --locked --no-fail-fast
+
+  rust_postgres:
+    name: PostgreSQL feature check
+    needs:
+      - rust_tests
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 45
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}\backend\target-postgres
+
+    defaults:
+      run:
+        working-directory: backend
+        shell: cmd
+
+    steps:
+      - name: Restore Git and shell bootstrap
+        working-directory: .
+        run: |
+          if not exist "D:\git-sdk-64-minimal\mingw64\bin\git.exe" exit /b 1
+          if not exist "D:\git-sdk-64-minimal\usr\bin\bash.exe" exit /b 1
+          git config --global --add safe.directory "%GITHUB_WORKSPACE%"
+          echo D:\git-sdk-64-minimal\usr\bin>>"%GITHUB_PATH%"
+          echo D:\git-sdk-64-minimal\mingw64\bin>>"%GITHUB_PATH%"
+
+      - name: Enable Windows long paths
+        working-directory: .
+        run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Verify preinstalled Rust MSVC toolchain
+        shell: cmd
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
+
+      - name: Restore PostgreSQL Rust cache
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: backend -> target-postgres
+          shared-key: windows-msvc-postgres
+          cache-bin: false
+          cache-on-failure: false
+          save-if: false
+
+      - name: Check PostgreSQL feature
+        run: cargo check --workspace --no-default-features --features postgres --locked
+
+  rustsec:
+    name: RustSec audit
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: backend
+        shell: cmd
+
+    steps:
+      - name: Restore Git and shell bootstrap
+        working-directory: .
+        run: |
+          if not exist "D:\git-sdk-64-minimal\mingw64\bin\git.exe" exit /b 1
+          if not exist "D:\git-sdk-64-minimal\usr\bin\bash.exe" exit /b 1
+          git config --global --add safe.directory "%GITHUB_WORKSPACE%"
+          echo D:\git-sdk-64-minimal\usr\bin>>"%GITHUB_PATH%"
+          echo D:\git-sdk-64-minimal\mingw64\bin>>"%GITHUB_PATH%"
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Verify preinstalled Rust MSVC toolchain
+        shell: cmd
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
+
+      - name: Install pinned cargo-audit binary
+        run: |
+          cargo audit --version > cargo-audit-version.log 2>&1
+          if not errorlevel 1 findstr /C:"cargo-audit 0.22.2" cargo-audit-version.log >nul && exit /b 0
+          cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Audit Rust dependencies
+        run: |
+          if exist "%RUNNER_TEMP%\rustsec-advisory-db" rmdir /s /q "%RUNNER_TEMP%\rustsec-advisory-db"
+          cargo audit --db "%RUNNER_TEMP%\rustsec-advisory-db" --ignore RUSTSEC-2023-0071 > cargo-audit.log 2>&1
+          set AUDIT_EXIT=%ERRORLEVEL%
+          type cargo-audit.log
+          exit /b %AUDIT_EXIT%
+
+      - name: Upload RustSec audit report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rustsec-audit-report
+          path: backend/cargo-audit.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+  rust_workspace:
+    name: Rust workspace, PostgreSQL and RustSec
+    if: |
+      always() &&
+      (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || github.event.pull_request.draft == false)
+    needs:
+      - rust_tests
+      - rust_postgres
+      - rustsec
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every Rust quality gate
+        shell: cmd
+        run: |
+          if not "${{ needs.rust_tests.result }}"=="success" exit /b 1
+          if not "${{ needs.rust_postgres.result }}"=="success" exit /b 1
+          if not "${{ needs.rustsec.result }}"=="success" exit /b 1

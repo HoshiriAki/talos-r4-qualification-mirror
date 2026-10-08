@@ -1,0 +1,293 @@
+name: TALOS Milestone Qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact frozen commit SHA to qualify
+        required: true
+        type: string
+      qualification_set:
+        description: Historical evidence set
+        required: true
+        default: p9
+        type: choice
+        options:
+          - p9
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talos-milestone-${{ inputs.qualification_set }}-${{ inputs.expected_sha }}
+  cancel-in-progress: false
+
+jobs:
+  pin:
+    name: Pin frozen milestone SHA
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact frozen source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact frozen HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git diff --check "$EXPECTED_HEAD^" "$EXPECTED_HEAD"
+          echo "MILESTONE_EXACT_HEAD=$EXPECTED_HEAD"
+
+  p9_clean_stack:
+    name: P9-SP02 clean Linux deployment
+    needs: pin
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          echo "EXACT_HEAD=$actual"
+
+      - name: Execute P9-SP02 clean-stack qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p9-sp02-clean-stack.sh 2>&1 | tee .talos-evidence/p9-sp02-workflow.log
+
+      - name: Upload P9-SP02 clean-stack evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p9-sp02-clean-stack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .talos-evidence/p9-sp02
+            .talos-evidence/p9-sp02-workflow.log
+          if-no-files-found: error
+          retention-days: 14
+
+  p9_deployed_auth:
+    name: P9-SP03 deployed human and machine authentication
+    needs: pin
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          echo "EXACT_HEAD=$actual"
+
+      - name: Execute P9-SP03 deployed-auth qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p9-sp03-deployed-auth.sh 2>&1 | tee .talos-evidence/p9-sp03-workflow.log
+
+      - name: Upload P9-SP03 deployed-auth evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p9-sp03-deployed-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .talos-evidence/p9-sp03
+            .talos-evidence/p9-sp03-workflow.log
+          if-no-files-found: error
+          retention-days: 14
+
+  p9_business_evidence:
+    name: P9-SP04 deployed business read/write and audit evidence
+    needs: pin
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          echo "EXACT_HEAD=$actual"
+
+      - name: Execute P9-SP04 deployed business evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p9-sp04-business-evidence.sh 2>&1 | tee .talos-evidence/p9-sp04-workflow.log
+
+      - name: Upload P9-SP04 business evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p9-sp04-business-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .talos-evidence/p9-sp04
+            .talos-evidence/p9-sp04-workflow.log
+          if-no-files-found: error
+          retention-days: 14
+
+  p9_observability_plugin_network:
+    name: P9-SP05 metrics, plugin fixture and network negative path
+    needs: pin
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          echo "EXACT_HEAD=$actual"
+
+      - name: Execute P9-SP05 observability and network qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p9-sp05-observability-plugin-network.sh 2>&1 | tee .talos-evidence/p9-sp05-workflow.log
+
+      - name: Upload P9-SP05 observability evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p9-sp05-observability-plugin-network-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .talos-evidence/p9-sp05
+            .talos-evidence/p9-sp05-workflow.log
+          if-no-files-found: error
+          retention-days: 14
+
+  p9_restart_recovery_shutdown:
+    name: P9-SP06 restart recovery and clean-environment qualification
+    needs: pin
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          echo "EXACT_HEAD=$actual"
+
+      - name: Execute P9-SP06 restart/recovery qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p9-sp06-restart-recovery-clean-shutdown.sh 2>&1 | tee .talos-evidence/p9-sp06-workflow.log
+
+      - name: Upload P9-SP06 restart/recovery evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p9-sp06-restart-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .talos-evidence/p9-sp06
+            .talos-evidence/p9-sp06-workflow.log
+          if-no-files-found: error
+          retention-days: 14
+
+  p9_evidence_gate:
+    name: P9 historical deployment evidence gate
+    if: always()
+    needs:
+      - pin
+      - p9_clean_stack
+      - p9_deployed_auth
+      - p9_business_evidence
+      - p9_observability_plugin_network
+      - p9_restart_recovery_shutdown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every P9 evidence job
+        env:
+          PIN: ${{ needs.pin.result }}
+          SP02: ${{ needs.p9_clean_stack.result }}
+          SP03: ${{ needs.p9_deployed_auth.result }}
+          SP04: ${{ needs.p9_business_evidence.result }}
+          SP05: ${{ needs.p9_observability_plugin_network.result }}
+          SP06: ${{ needs.p9_restart_recovery_shutdown.result }}
+        run: |
+          set -euo pipefail
+          for result in "$PIN" "$SP02" "$SP03" "$SP04" "$SP05" "$SP06"; do
+            test "$result" = "success"
+          done
+          echo "P9_HISTORICAL_DEPLOYMENT_EVIDENCE=PASS"

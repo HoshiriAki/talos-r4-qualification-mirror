@@ -1,0 +1,49 @@
+{
+  "name": "talos-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:allocate": "node scripts/ui-lab-e2e-port-preflight.mjs --allocate",
+    "test:e2e:preflight": "node scripts/ui-lab-e2e-port-preflight.mjs",
+    "test:e2e:prod": "node scripts/ui-lab-prod-gate.mjs",
+    "ui:lab:bundle": "node scripts/ui-lab-visual-bundle.mjs",
+    "ui:lab:bundle:verify": "node scripts/verify-ui-lab-visual-bundle.mjs",
+    "ui:lab": "vite --open /ui-lab",
+    "ui:registry:check": "node scripts/check-ui-registry.mjs"
+  },
+  "dependencies": {
+    "@antv/g2": "^5.4.8",
+    "@iconify/vue": "^5.0.1",
+    "@primevue/themes": "^4.5.0",
+    "@unocss/reset": "^66.6.8",
+    "html5-qrcode": "^2.3.8",
+    "pinia": "^3.0.0",
+    "primevue": "^4.5.0",
+    "vue": "^3.5.43",
+    "vue-i18n": "^11.4.6",
+    "vue-router": "^5.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@primevue/auto-import-resolver": "^4.5.0",
+    "@unocss/preset-wind3": "^66.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "dependency-cruiser": "^16.0.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "ts-morph": "^25.0.0",
+    "typescript": "~5.7.0",
+    "unocss": "^66.0.0",
+    "unplugin-vue-components": "^32.0.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.0.0"
+  }
+}

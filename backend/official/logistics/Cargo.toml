@@ -1,0 +1,11 @@
+[package]
+name = "official-logistics"
+version = "0.1.0"
+edition = "2024"
+description = "物流路由 — SF Express 时效矩阵 + 仓库路线解析"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true

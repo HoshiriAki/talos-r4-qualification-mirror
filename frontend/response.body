@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pocket3 租赁管理系统</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    <script>
+      (function(){var t=localStorage.getItem('pocket3-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');})()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

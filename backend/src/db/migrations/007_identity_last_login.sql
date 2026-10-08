@@ -1,0 +1,1 @@
+-- identities.last_login_at is part of the clean identity baseline.

@@ -1,0 +1,151 @@
+name: Export UI Lab Visual Bundle
+
+# Temporarily manual-only. Run this workflow explicitly for UI Lab changes or
+# release evidence instead of exporting a visual bundle for every pull request.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-lab-export-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    env:
+      # The pull-request workflow intentionally tests GitHub's synthetic merge
+      # ref. Preserve the source branch and base commit as separate evidence.
+      UI_LAB_SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      UI_LAB_SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      UI_LAB_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+      UI_LAB_TESTED_CHECKOUT_SHA: ${{ github.sha }}
+      UI_LAB_TESTED_REF: ${{ github.ref }}
+    steps:
+      - name: Enable Windows long paths
+        shell: cmd
+        run: git config --global core.longpaths true
+
+      - name: Checkout tested ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # pull_request checks out refs/pull/<number>/merge. The visual bundle
+          # records this tested checkout separately from the PR source head.
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install frozen dependencies
+        shell: cmd
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate component Registry
+        shell: cmd
+        run: pnpm --dir frontend ui:registry:check
+
+      - name: Typecheck frontend
+        shell: cmd
+        run: pnpm --dir frontend typecheck
+
+      - name: Run UI Lab state/protocol unit tests
+        shell: cmd
+        run: pnpm --dir frontend test
+
+      - name: Install Playwright chromium
+        shell: cmd
+        run: pnpm --dir frontend exec playwright install chromium
+
+      - name: Build UI Lab-enabled frontend
+        shell: cmd
+        run: |
+          set VITE_ENABLE_UI_LAB=true
+          pnpm --dir frontend build
+
+      - name: Allocate UI Lab E2E port
+        shell: cmd
+        timeout-minutes: 1
+        run: pnpm --dir frontend test:e2e:allocate
+
+      - name: Release stale UI Lab E2E port
+        shell: cmd
+        run: pnpm --dir frontend test:e2e:preflight
+
+      - name: Run UI Lab e2e suite (dev server)
+        shell: cmd
+        run: pnpm --dir frontend test:e2e
+
+      - name: Run UI Lab production gate (default closed / enabled open)
+        shell: cmd
+        run: pnpm --dir frontend test:e2e:prod
+
+      - name: Stage UI Lab visual bundle
+        shell: cmd
+        run: pnpm --dir frontend ui:lab:bundle
+
+      - name: Zip and verify UI Lab visual bundle
+        shell: powershell
+        run: |
+          $artifacts = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $bundle = Join-Path $artifacts 'ui-lab'
+          $zip = Join-Path $artifacts 'ui-lab.zip'
+          if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+          Push-Location $bundle
+          try {
+            $entries = Get-ChildItem -File -Recurse | ForEach-Object { $_.FullName.Substring($bundle.Length).TrimStart('\', '/').Replace('\', '/') }
+            if (-not $entries) { throw 'UI Lab bundle has no files to archive' }
+            & tar.exe -a -c -f '..\ui-lab.zip' @entries
+            if ($LASTEXITCODE -ne 0) { throw "tar.exe ZIP creation failed with exit code $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          pnpm --dir frontend ui:lab:bundle:verify -- "${zip}"
+
+      - name: Reject local model proxy configuration
+        shell: powershell
+        run: |
+          $tracked = git ls-files .codex/config.toml .harness/repros
+          if ($tracked) {
+            $hits = git grep -n -E 'HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|127\.0\.0\.1:7892' -- .codex .harness/repros 2>$null
+            if ($hits) { throw "Local proxy configuration is present in the PR: $hits" }
+          }
+          # git grep 无匹配时退出码为 1，PowerShell 步骤会据此判定失败；
+          # 无代理命中时显式 exit 0，命中时 throw 已中止。
+          Write-Output 'proxy guard: no local proxy configuration'
+          exit 0
+
+      - name: Upload UI Lab visual bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ui-lab-visual-bundle
+          # 唯一权威 artifact：只上传 zip（内含 manifest），避免目录副本因隐藏
+          # 文件策略与 manifest 不一致。下载后解压外层 artifact → 得 ui-lab.zip。
+          path: |
+            artifacts/ui-lab.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ui-lab-playwright-report
+          path: .playwright-mcp/report
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Check diff whitespace
+        if: always()
+        shell: cmd
+        run: git diff --check origin/prototype...HEAD

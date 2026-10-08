@@ -1,0 +1,25 @@
+[package]
+name = "system-admin"
+version = "0.1.0"
+edition = "2024"
+description = "系统管理 — 认证 + 员工 + 审计 + 用户设置"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+scrypt.workspace = true
+aes-gcm.workspace = true
+rand = "0.8"
+uuid.workspace = true
+hex = "0.4"
+sha2 = "0.10"
+subtle = "2"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+regex = "1"
+tracing = "0.1"

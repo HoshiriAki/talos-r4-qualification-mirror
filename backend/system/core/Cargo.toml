@@ -1,0 +1,16 @@
+[package]
+name = "system-core"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+experimental-orchestration = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+async-trait.workspace = true
+secrecy.workspace = true
+zeroize.workspace = true

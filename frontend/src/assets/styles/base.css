@@ -1,0 +1,979 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Industrial Avant UI Design System — Talos
+   Brutalism(结构) + Avant-Garde(运动) + Modern SaaS(可用性)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 暗色阶 (Dark Scale) — 6 级背景体系 ──────────────────────────── */
+  --bg-base:             #0B0B0D;   /* 01 基底层 — 页面最底层 */
+  --bg-surface:          #161618;   /* 02 表面层 — 卡片、面板、侧边栏 */
+  --bg-elevated:         #1E1E22;   /* 03 浮起层 — 表格行悬停、次要浮层 */
+  --bg-field:            #252528;   /* 04 字段层 — 输入框背景、代码块 */
+  --bg-subtle:           #2A2A2E;   /* 05 微调层 — 分割区域、次级背景 */
+  --bg-muted:            #32323A;   /* 06 最亮层 — 极少使用、特殊强调 */
+
+  /* 向后兼容别名 */
+  --bg-surface-hover:    var(--bg-elevated);
+  --bg-surface-raised:   var(--bg-elevated);
+  --bg-input:            var(--bg-field);
+
+  /* ── 边框体系 (Border System) ───────────────────────────────────── */
+  --border-base:         #242427;   /* 1px 默认边框、分割线 */
+  --border-strong:       #3D3D42;   /* 2px 强调边框、活跃卡片 */
+  --border-accent:       #FF453A;   /* 强调色边框、焦点、选中 */
+
+  /* 向后兼容别名 */
+  --border-default:      var(--border-base);
+  --border-hover:        var(--border-strong);
+  --border-active:       var(--border-accent);
+  --border-focus:        var(--border-accent);
+
+  /* ── 文字体系 (Text System) ─────────────────────────────────────── */
+  --text-primary:        #F5F5F4;   /* 标题、重要数据 */
+  --text-secondary:      #8E8E96;   /* 正文、标签 */
+  --text-tertiary:       #797979;   /* 占位符、禁用文字（修复：4.52:1 对比度，符合 WCAG AA） */
+  --text-accent:         #FF453A;   /* 关键数字、链接 */
+  --text-inverse:        #0D0D0F;   /* 深色背景上的文字 */
+
+  /* 向后兼容别名 */
+  --text-muted:          var(--text-tertiary);
+
+  /* ── 强调色 (Accent) — 唯一的色彩 ────────────────────────────────── */
+  --accent:              #FF453A;   /* 核心强调 */
+  --accent-hover:        #FF6B5A;   /* 悬停强调 */
+  --accent-muted:        #8B2520;   /* 弱化强调、选中/标签背景 */
+
+  /* ── 功能色 (Functional) ────────────────────────────────────────── */
+  --status-success:      #30D158;   /* 已完成、正常状态 */
+  --status-warning:      #FF9F0A;   /* 逾期、待处理 */
+  --status-error:        #FF453A;   /* = accent，与强调色统一 */
+  --status-info:         #64D2FF;   /* 中性提示 */
+
+  /* 向后兼容别名 */
+  --red:                 var(--status-error);
+  --green:               var(--status-success);
+
+  /* ── 特殊图案色 ─────────────────────────────────────────────────── */
+  --stripe-light:        #FF453A;   /* 对角警示带亮色 */
+  --stripe-dark:         #0D0D0F;   /* 对角警示带暗色 */
+  --grid-line:           rgba(255,255,255,0.04); /* 背景网格覆盖 */
+
+  /* ── 3D 场景专属 ────────────────────────────────────────────────── */
+  --3d-face:             #1A1A1E;   /* 实体面（平色，无光照） */
+  --3d-edge:             #2A2A2E;   /* 可见边线 */
+  --3d-guide:            #3D3D42;   /* 辅助/构造线（虚线） */
+  --3d-node:             #FF453A;   /* 交互节点/关键位置 */
+  --3d-ground:           #0D0D0F;   /* 地面参考面 */
+  --3d-occupied:         #FF453A;   /* 已占用区域 */
+  --3d-available:        #1A1A1E;   /* 空闲区域 */
+  --3d-maintenance:      #FF9F0A;   /* 维修中区域 */
+  --3d-highlight:        #FFFFFF;   /* 悬停高亮 */
+
+  /* ── 按钮色 (向后兼容) ──────────────────────────────────────────── */
+  --btn-primary-bg:      var(--accent);
+  --btn-primary-text:    #FFFFFF;
+  --btn-secondary-bg:    var(--bg-field);
+  --btn-secondary-text:  var(--text-primary);
+  --btn-danger-bg:       var(--accent-muted);
+  --btn-danger-text:     var(--accent-hover);
+
+  /* ── 字体排版 (Typography) ──────────────────────────────────────── */
+  --font-mono:           'Space Mono', 'Courier New', 'Microsoft YaHei', monospace;
+  --font-sans:           'Inter', 'Microsoft YaHei', -apple-system, sans-serif;  /* 正文 */
+  --font-size-caption:   11px;  /* 标签、编号 */
+  --font-size-xs:        12px;  /* 辅助文字 */
+  --font-size-sm:        13px;  /* 代码块 */
+  --font-size-base:      14px;  /* 表格内容、描述 */
+  --font-size-md:        15px;  /* 正文 */
+  --font-size-lg:        16px;  /* 卡片标题 */
+  --font-size-xl:        18px;  /* 次要数据读数 */
+  --font-size-2xl:       22px;  /* 区域标题 */
+  --font-size-3xl:       28px;  /* 页面主标题 */
+  --font-size-kpi:       36px;  /* 核心指标大字 */
+  --font-size-hero:      48px;  /* Hero 锚点 (可扩展至 120px) */
+  --line-height-tight:   1.1;   /* KPI / Hero */
+  --line-height-heading: 1.2;   /* 标题 */
+  --line-height-normal:  1.5;   /* 正文 / 表格 */
+
+  /* ── 几何 (Geometry) — v1.1: !important blocks PrimeVue Aura from overwriting at runtime ──────── */
+  --radius-none:         0px  !important;   /* 图表结构元素、状态指示器微圆角时的基线 */
+  --radius-sm:           4px  !important;   /* 状态指示器、图表柱形/图例方块 (微圆角) */
+  --radius-md:           8px  !important;   /* 输入框、选择器、Ghost/Text 按钮 */
+  --radius-lg:           10px !important;   /* 按钮、Badge */
+  --radius-xl:           12px !important;   /* 卡片、模态框/Dialog */
+  --radius-full:         16px !important;   /* 头像 (Squircle) */
+
+  /* ── 阴影 (v1.2) — 硬直角偏移，无模糊，工业机械厚度 ──────────────── */
+  --shadow-offset-default:  4px 4px 0px rgba(255,255,255,0.06);
+  --shadow-offset-accent:   4px 4px 0px var(--accent);
+  --shadow-offset-hover:    6px 6px 0px var(--accent);
+  --shadow-accent-glow:     0 0 0 1px var(--accent), 4px 4px 0px var(--accent);
+
+  /* ── Z-Index 层级系统 (v1.2) — 统一的空间层次管理 ──────────────── */
+  --z-base:              0;    /* 默认层 — 普通内容 */
+  --z-dropdown:          10;   /* 下拉菜单、工具提示 */
+  --z-sticky:            20;   /* 固定元素 — 顶栏、侧边栏 */
+  --z-overlay:           30;   /* 遮罩层 — 对话框背景 */
+  --z-modal:             40;   /* 模态框 — 对话框内容 */
+  --z-popover:           50;   /* 气泡提示 — 高优先级提示 */
+  --z-toast:             60;   /* 通知消息 — 最高层级 */
+
+  /* ── 玻璃态材质 Token (v1.1) ───────────────────────────────────── */
+  /* 暗色主题 */
+  --glass-bg:            rgba(22, 22, 24, 0.55);
+  --glass-bg-elevated:   rgba(30, 30, 34, 0.65);
+  --glass-blur:          26px;
+  --glass-border:        1px solid rgba(255, 255, 255, 0.07);
+  --glass-highlight:     linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 40%);
+  --glass-divider:       1px solid rgba(255, 255, 255, 0.06);  /* 玻璃内部分割线，比主边框更细更暗 */
+  /* 玻璃使用规则: ✅ 导航栏/侧边栏/弹窗/下拉菜单/通知/背景层 */
+  /*              ❌ 数据卡片/表格/图表容器/正文区域 (保持不透明) */
+
+  /* ── 遮罩层 (Overlay) ────────────────────────────────────────────── */
+  --overlay-bg:          rgba(0, 0, 0, 0.55);
+
+  /* ── 间距 (Spacing) ─────────────────────────────────────────────── */
+  --space-xs:            6px;
+  --space-s:             12px;
+  --space-m:             16px;
+  --space-l:             24px;
+  --space-xl:            48px;
+  --space-1:             4px;
+  --space-2:             8px;
+  --space-3:             12px;
+  --space-4:             16px;
+  --space-6:             24px;
+  --space-8:             32px;
+
+  /* ── 运动 (Motion) — 平滑流体过渡 (v1.1 skill revision) ────────── */
+  --duration-instant:    0ms;
+  --duration-press:      80ms;    /* 按钮按压 translateY 1px */
+  --duration-micro:      120ms;   /* 微小位移 hover 2-4px, border-color */
+  --duration-fade:       150ms;   /* opacity 淡入淡出 */
+  --duration-normal:     200ms;   /* 模块入场, 页面过渡 fade+slide 16px */
+  --duration-slow:       300ms;   /* 大型区域过渡 */
+  --duration-page:       480ms;   /* 加载动画 (scan sweep, pipeline travel) */
+  --ease-press:          ease-out;
+  --ease-micro:          ease-out;
+  --ease-page:           ease-out;
+  --ease-loading:        ease-in-out;
+
+  /* ── Z-index scale ───────────────────────────────────────────────── */
+  --z-base:              0;
+  --z-overlay:           10;
+  --z-dropdown:          20;
+  --z-modal-bg:          30;
+  --z-modal:             40;
+  --z-toast:             50;
+  --z-tooltip:           100;
+
+  /* ── RGB aliases (for rgba() usage) ──────────────────────────────── */
+  --status-success-rgb:  48, 209, 88;
+  --status-warning-rgb:  255, 159, 10;
+  --status-error-rgb:    255, 69, 58;
+  --status-info-rgb:     100, 210, 255;
+
+  /* ── Backward-compat aliases ─────────────────────────────────────── */
+  --panel-bg:            var(--bg-surface);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Light Theme
+   ═══════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] {
+  --bg-base:             #EDECEA;
+  --bg-surface:          #FAF9F7;
+  --bg-elevated:         #F0EFED;
+  --bg-field:            #E8E7E5;
+  --bg-subtle:           #E0DFDD;
+  --bg-muted:            #D4D4D2;
+
+  --border-default:      #D4D4D2;
+  --border-hover:        #A0A09E;
+  --border-active:       #FF453A;
+  --border-focus:        #FF453A;
+
+  --text-primary:        #0D0D0F;
+  --text-secondary:      #4A4A48;
+  --text-muted:          #7A7A78;
+  --text-accent:         #FF453A;
+  --text-inverse:        #FAF9F7;
+
+  --btn-primary-bg:      var(--accent);
+  --btn-primary-text:    #FFFFFF;
+  --btn-secondary-bg:    #E0DFDD;
+  --btn-secondary-text:  #0D0D0F;
+  --btn-danger-bg:       #FDE0DE;
+  --btn-danger-text:     #C04040;
+
+  --status-success:      #1A8C3A;
+  --status-warning:      #CC8000;
+  --status-error:        #FF453A;
+  --status-info:         #1A80CC;
+
+  --red:                 var(--status-error);
+  --green:               var(--status-success);
+
+  --accent-muted:        #FFE0DE;
+  --stripe-dark:         #FAF9F7;
+  --grid-line:           rgba(0,0,0,0.04);
+
+  /* ── 阴影 (v1.2 浅色) ──────────────────────────────────────────── */
+  --shadow-offset-default:  4px 4px 0px rgba(0,0,0,0.12);
+  --shadow-offset-accent:   4px 4px 0px var(--accent);
+  --shadow-offset-hover:    6px 6px 0px var(--accent);
+  --shadow-accent-glow:     0 0 0 1px var(--accent), 4px 4px 0px var(--accent);
+
+  /* ── 玻璃态材质 Token (v1.1 浅色) ───────────────────────────────── */
+  --glass-bg:            rgba(250, 249, 247, 0.55);
+  --glass-bg-elevated:   rgba(240, 239, 237, 0.65);
+  --glass-blur:          24px;
+  --glass-border:        1px solid rgba(0, 0, 0, 0.08);
+  --glass-highlight:     linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 40%);
+  --glass-divider:       1px solid rgba(0, 0, 0, 0.06);  /* 玻璃内部分割线 */
+
+  /* ── 遮罩层 (Overlay 浅色) ──────────────────────────────────────── */
+  --overlay-bg:          rgba(0, 0, 0, 0.45);
+
+  --3d-face:             #EDECEA;
+  --3d-edge:             #D4D4D2;
+  --3d-guide:            #A0A09E;
+  --3d-available:        #F0EFED;
+  --3d-ground:           #EDECEA;
+
+  /* ── RGB aliases (for rgba() usage) ──────────────────────────────── */
+  --status-success-rgb:  26, 140, 58;
+  --status-warning-rgb:  204, 128, 0;
+  --status-error-rgb:    255, 69, 58;
+  --status-info-rgb:     26, 128, 204;
+
+  /* ── Backward-compat aliases ─────────────────────────────────────── */
+  --panel-bg:            var(--bg-surface);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Global Resets
+   ═══════════════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--text-primary);
+  background-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  overflow: auto;
+  background-color: var(--bg-base);
+}
+
+#app {
+  height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Scrollbar — 工业薄轨
+   ═══════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Focus — 方形焦点框
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Selection
+   ═══════════════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Micro-interaction — smooth fluid transitions
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Button press */
+.btn:active,
+button:active:not([disabled]) {
+  transform: translateY(1px);
+  transition: transform 80ms ease-out;
+}
+
+/* Toast enter/exit */
+@keyframes toast-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes toast-out {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Page Transition — industrial fade + slide (48px mechanical throw)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.page-slide-enter-active,
+.page-slide-leave-active {
+  transition:
+    opacity var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1),
+    transform var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
+}
+.page-slide-enter-from {
+  transform: translateX(48px);
+  opacity: 0;
+}
+.page-slide-leave-to {
+  transform: translateX(-48px);
+  opacity: 0;
+}
+
+/* Fallback */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--duration-fade) var(--ease-page);
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Staggered Entrance — assembly-line sequential build-up
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.stagger-item {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity var(--duration-normal) ease-out,
+    transform var(--duration-normal) ease-out;
+}
+
+.stagger-item--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Batch toolbar — 高度展开（layout-isolated）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.batch-panel-enter-active,
+.batch-panel-leave-active {
+  transition: max-height var(--duration-micro), opacity var(--duration-micro);
+  will-change: max-height;
+}
+.batch-panel-enter-from,
+.batch-panel-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.batch-panel-enter-to,
+.batch-panel-leave-from {
+  max-height: 140px;
+  opacity: 1;
+}
+
+/* Prevent batch-toolbar height change from cascading reflow into DataTable rows */
+.table-panel {
+  contain: layout style;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Generic collapsible
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: max-height var(--duration-normal), opacity var(--duration-micro);
+  overflow: hidden;
+}
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.collapse-enter-to,
+.collapse-leave-from {
+  max-height: 800px;
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Glass — 玻璃态浮层 (v1.1) — 仅用于导航/侧栏/弹窗/下拉/通知
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border);
+  box-shadow: var(--shadow-offset-default);
+  position: relative;
+}
+
+/* Glass edge highlight — 顶部1px亮线，真正的"玻璃感"来源 */
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--glass-highlight);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Accessibility — prefers-reduced-motion
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Confirm dialog table (PricePage save-order preview)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.confirm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-2);
+}
+
+.confirm-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: top;
+  line-height: var(--line-height-normal);
+}
+
+.confirm-label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 12px !important;
+  text-align: right;
+}
+
+.confirm-value {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.confirm-warn {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--status-error);
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PrimeVue Dialog — 玻璃态浮层 (v1.1)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Dialog mask */
+.p-dialog-mask {
+  background: var(--overlay-bg) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Dialog panel — glass, 12px radius, offset shadow */
+.p-dialog {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 8px 8px 0px var(--border-hover) !important;
+}
+
+/* Dialog header */
+.p-dialog-header {
+  background: transparent !important;
+  border-bottom: var(--glass-divider) !important;
+  padding: 1rem 1.25rem !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.p-dialog-header .p-dialog-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Dialog close button */
+.p-dialog-header-icon {
+  color: var(--text-muted) !important;
+  border-radius: var(--radius-md) !important;
+  transition: color var(--duration-micro), background var(--duration-micro);
+}
+.p-dialog-header-icon:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-elevated) !important;
+}
+
+/* Dialog content */
+.p-dialog-content {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  padding: 1.25rem !important;
+  font-family: var(--font-sans);
+}
+
+/* Dialog footer */
+.p-dialog-footer {
+  background: transparent !important;
+  border-top: var(--glass-divider) !important;
+  padding: 0.75rem 1.25rem !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ConfirmDialog */
+.p-confirm-dialog {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 8px 8px 0px var(--border-hover) !important;
+}
+
+.p-confirm-dialog .p-dialog-header {
+  border-bottom: var(--glass-divider) !important;
+}
+
+.p-confirm-dialog .p-dialog-content {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+.p-confirm-dialog .p-dialog-footer {
+  border-top: var(--glass-divider) !important;
+  background: transparent !important;
+}
+
+/* Footer buttons — 10px radius */
+.p-dialog-footer .p-button,
+.p-confirm-dialog .p-dialog-footer .p-button {
+  border-radius: var(--radius-lg);
+}
+
+/* Inline ConfirmPopup — glass */
+.p-confirm-popup {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 6px 6px 0px var(--border-hover) !important;
+}
+
+.p-confirm-popup .p-confirm-popup-content {
+  color: var(--text-primary) !important;
+  font-family: var(--font-mono);
+}
+
+.p-confirm-popup .p-confirm-popup-footer {
+  background: transparent !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Status Indicators — 8×8px 方块，4px 微圆角，色盲友好
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* ● 实心 — 已完成/正常 */
+.status-indicator--success {
+  background: var(--status-success);
+}
+
+/* ◐ 半填充 — 进行中/待处理 */
+.status-indicator--warning {
+  background: linear-gradient(
+    to right,
+    var(--status-warning) 50%,
+    transparent 50%
+  );
+  border: 1px solid var(--status-warning);
+}
+
+/* ○ 空心 — 待处理/空闲 */
+.status-indicator--pending {
+  background: transparent;
+  border: 1px solid var(--text-muted);
+}
+
+/* ◆ 实心+条纹 — 已逾期/错误 */
+.status-indicator--error {
+  background: var(--status-error);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.3) 2px,
+    rgba(0, 0, 0, 0.3) 4px
+  );
+}
+
+/* ▣ 空心+X — 已取消 */
+.status-indicator--cancelled {
+  background: transparent;
+  border: 1px solid var(--text-muted);
+  position: relative;
+}
+.status-indicator--cancelled::before,
+.status-indicator--cancelled::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 1px;
+  background: var(--text-muted);
+}
+.status-indicator--cancelled::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.status-indicator--cancelled::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Diagonal Stripes — 对角警示条纹（Danger按钮 / Alert卡片角标）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.stripe-corner {
+  position: relative;
+  overflow: hidden;
+}
+
+.stripe-corner::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--stripe-light),
+    var(--stripe-light) 2px,
+    var(--stripe-dark) 2px,
+    var(--stripe-dark) 4px
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Button Shadows — 硬偏移阴影
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.btn-shadow-default {
+  box-shadow: var(--shadow-offset-default);
+}
+
+.btn-shadow-accent {
+  box-shadow: var(--shadow-offset-accent);
+}
+
+.btn-shadow-hover {
+  box-shadow: var(--shadow-offset-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Industrial Loading Keyframes
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Scan line sweep — 水平扫描线从上到下 */
+@keyframes scan-sweep {
+  0%   { top: 0%; }
+  25%  { top: 25%; }
+  50%  { top: 50%; }
+  75%  { top: 75%; }
+  100% { top: 100%; }
+}
+
+/* Pipeline flow — 数据包沿管道流动 */
+@keyframes pipeline-flow {
+  0%   { stroke-dashoffset: 200; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* Assembly stagger — 模块依次入场 */
+@keyframes assembly-enter {
+  0%   { opacity: 0; transform: translateY(8px); }
+  50%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   AINode — AI 系统状态指示器（方块，非聊天泡泡）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ai-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  transition: border-color var(--duration-micro), background var(--duration-micro);
+}
+
+.ai-node--idle {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.ai-node--processing {
+  border-color: var(--accent);
+  background: var(--bg-surface);
+  animation: ai-node-pulse 1200ms steps(2) infinite;
+}
+
+.ai-node--completed {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+@keyframes ai-node-pulse {
+  0%, 100% { border-color: var(--accent); }
+  50%      { border-color: var(--accent-hover); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Page Transition v1.1 — fade + slide + cubic-bezier
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.page-fade-slide-enter-active {
+  transition: transform var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1),
+              opacity var(--duration-micro);
+}
+.page-fade-slide-leave-active {
+  transition: transform var(--duration-micro) cubic-bezier(0.4, 0, 0.2, 1),
+              opacity var(--duration-micro);
+}
+.page-fade-slide-enter-from {
+  transform: translateX(48px);
+  opacity: 0;
+}
+.page-fade-slide-leave-to {
+  transform: translateX(-48px);
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hero Anchor — 超大字号视觉锚点，每页唯一，60%+宽度
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.hero-anchor {
+  position: relative;
+  padding: var(--space-l) var(--space-l) var(--space-l) calc(var(--space-l) + 4px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+/* 背景脉冲 — accent 0.03 透明度呼吸 */
+.hero-anchor::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(255,69,58,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  animation: hero-pulse 4s ease-in-out infinite;
+}
+
+@keyframes hero-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+.hero-number {
+  font-family: var(--font-mono);
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 0.9;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-kpi {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-kpi);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Version Footer — YYYY — VN.NN — REV.N
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.version-footer {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  padding: var(--space-m) 0;
+  border-top: 1px solid var(--border-default);
+  margin-top: var(--space-l);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Module Bar — MODULE-NN + structure line + page label (mandatory per page)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.module-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 8px 0;
+  flex-shrink: 0;
+}
+
+.module-number-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.module-page-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme Transition — View Transitions API for smooth theme switching
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* View Transitions API 动画 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: fade-in;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 备用：渐变过渡（不支持 View Transitions API 的浏览器） */
+:root {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 支持 prefers-reduced-motion 的用户 */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  
+  :root {
+    transition: none;
+  }
+}

@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>UI Validation Report</title><style>
+body{font-family:Inter,system-ui,sans-serif;margin:32px;background:#0f172a;color:#e2e8f0} .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:20px;margin:16px 0} h1{margin:0}.status{color:#dc2626;font-weight:800} table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #334155;padding:8px;text-align:left} img{max-width:100%;border:1px solid #334155;border-radius:10px;background:white}
+</style></head><body>
+<h1>Browser Validation: <span class="status">FAIL</span></h1>
+<p>URL: http://localhost:5173 · Duration: 386ms · Run: 2026-07-12T12-38-04-041Z</p>
+<div class="card"><h2>Golden Path Checks</h2><table><tr><th>Check</th><th>Status</th><th>Detail</th></tr><tr><td>page-load</td><td>FAIL</td><td>page.goto: net::ERR_EMPTY_RESPONSE at http://localhost:5173/
+Call log:
+[2m  - navigating to &quot;http://localhost:5173/&quot;, waiting until &quot;networkidle&quot;[22m
+</td></tr>
+<tr><td>console-errors</td><td>PASS</td><td>0 errors</td></tr>
+<tr><td>network-failures</td><td>FAIL</td><td>1 failures</td></tr></table></div>
+<div class="card"><h2>Console</h2><table><tr><th>Type</th><th>Text</th></tr><tr><td colspan="2">None</td></tr></table></div>
+<div class="card"><h2>Network Failures</h2><table><tr><th>Method</th><th>Status/Failure</th><th>URL</th></tr><tr><td>GET</td><td>net::ERR_EMPTY_RESPONSE</td><td>http://localhost:5173/</td></tr></table></div>
+<div class="card"><h2>Screenshots</h2></div>
+</body></html>

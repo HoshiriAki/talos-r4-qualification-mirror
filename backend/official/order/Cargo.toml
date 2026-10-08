@@ -1,0 +1,19 @@
+[package]
+name = "official-order"
+version = "0.1.0"
+edition = "2024"
+description = "订单交易 — 订单 CRUD + 定价引擎 + 营收报表"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+chrono.workspace = true
+chrono-tz = "0.10"
+uuid.workspace = true
+regex = "1"
+rust_xlsxwriter = "0.79"

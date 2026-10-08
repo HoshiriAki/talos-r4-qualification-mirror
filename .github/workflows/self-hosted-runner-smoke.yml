@@ -1,0 +1,32 @@
+name: TALOS Self-Hosted Runner Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talos-self-hosted-runner-smoke
+  cancel-in-progress: false
+
+jobs:
+  capability-smoke:
+    name: talos-ops-prototype-1 capability probe
+    runs-on:
+      - talos-ops
+      - windows-x64
+      - prototype
+    timeout-minutes: 10
+
+    steps:
+      - name: Probe runner identity
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "Runner identity: $((& whoami).Trim())"
+          Write-Host "Runner name: $env:RUNNER_NAME"
+          Write-Host "Runner OS/arch: $env:RUNNER_OS / $env:RUNNER_ARCH"
+          Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+          Write-Host "Runner temp: $env:RUNNER_TEMP"
+          Write-Host "Runner tool cache: $env:RUNNER_TOOL_CACHE"

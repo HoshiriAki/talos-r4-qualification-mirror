@@ -1,0 +1,17 @@
+[package]
+name = "official-finance"
+version = "0.1.0"
+edition = "2024"
+description = "押金 + 退款 — deposit calculate/collect/release/forfeit + refund request/approve/execute"
+
+[dependencies]
+system-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+rusqlite = { version = "0.32", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+uuid.workspace = true
+chrono = { version = "0.4" }
+chrono-tz = "0.10"
