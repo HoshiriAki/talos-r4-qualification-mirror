@@ -1,0 +1,79 @@
+name: TALOS R4 Mirror Continuous Qualification
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    name: Resolve mirror repair identity
+    runs-on: ubuntu-latest
+    outputs:
+      source_commit_sha: ${{ steps.identity.outputs.source_commit_sha }}
+      source_tree_sha: ${{ steps.identity.outputs.source_tree_sha }}
+      source_repository: ${{ steps.identity.outputs.source_repository }}
+      package_branch: ${{ steps.identity.outputs.package_branch }}
+      repair_id: ${{ steps.identity.outputs.repair_id }}
+      repair_origin_mirror_sha: ${{ steps.identity.outputs.repair_origin_mirror_sha }}
+      repair_base_sha: ${{ steps.identity.outputs.repair_base_sha }}
+    steps:
+      - name: Checkout mirror repair candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Resolve and validate repair lineage
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "HoshiriAki/talos-r4-qualification-mirror"
+          head="$(git rev-parse HEAD)"
+          base="$(git rev-parse HEAD^)"
+          origin="$(git rev-list --max-parents=0 HEAD)"
+          test "$(printf '%s\n' "$origin" | wc -l)" -eq 1
+          origin_message="$(git show -s --format=%B "$origin")"
+          head_message="$(git show -s --format=%B "$head")"
+          source_repository="$(printf '%s\n' "$origin_message" | sed -n 's/^source-repository: //p' | tail -n 1)"
+          source_commit_sha="$(printf '%s\n' "$origin_message" | sed -n 's/^source-commit: //p' | tail -n 1)"
+          source_tree_sha="$(printf '%s\n' "$origin_message" | sed -n 's/^source-tree: //p' | tail -n 1)"
+          repair_id="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-MIRROR-REPAIR-ID: //p' | tail -n 1)"
+          package_branch="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-BRANCH: //p' | tail -n 1)"
+          test "$source_repository" = "HoshiriAki/TESSERACT-WAREHOUSiNG"
+          [[ "$source_commit_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$source_tree_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$origin" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$base" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$repair_id" =~ ^[A-Z0-9._-]{1,64}$ ]]
+          [[ "$package_branch" =~ ^[A-Za-z0-9._/-]+$ ]]
+          [[ "$package_branch" != *..* ]]
+          [[ "$package_branch" != *@\{* ]]
+          test "$(git rev-parse "${origin}^{tree}")" = "$source_tree_sha"
+          git merge-base --is-ancestor "$origin" "$head"
+          {
+            echo "source_commit_sha=$source_commit_sha"
+            echo "source_tree_sha=$source_tree_sha"
+            echo "source_repository=$source_repository"
+            echo "package_branch=$package_branch"
+            echo "repair_id=$repair_id"
+            echo "repair_origin_mirror_sha=$origin"
+            echo "repair_base_sha=$base"
+          } >> "$GITHUB_OUTPUT"
+
+  qualification:
+    name: Qualify mirror repair
+    needs: identity
+    uses: ./.github/workflows/exact-head-qualification.yml
+    with:
+      source_commit_sha: ${{ needs.identity.outputs.source_commit_sha }}
+      source_tree_sha: ${{ needs.identity.outputs.source_tree_sha }}
+      source_repository: ${{ needs.identity.outputs.source_repository }}
+      package_branch: ${{ needs.identity.outputs.package_branch }}
+      repair_id: ${{ needs.identity.outputs.repair_id }}
+      repair_origin_mirror_sha: ${{ needs.identity.outputs.repair_origin_mirror_sha }}
+      repair_base_sha: ${{ needs.identity.outputs.repair_base_sha }}

@@ -147,6 +147,34 @@ function gitTree(root) {
   }).trim();
 }
 
+function gitCommitTree(root, sha) {
+  return execFileSync('git', ['rev-parse', `${sha}^{tree}`], {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+}
+
+function gitFirstParent(root, sha = 'HEAD') {
+  return execFileSync('git', ['rev-parse', `${sha}^`], {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+}
+
+function gitIsAncestor(root, ancestor, descendant) {
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], {
+      cwd: root,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertTrackedSourceClean(root) {
   const dirty = execFileSync(
     'git',
@@ -188,6 +216,9 @@ export async function buildProvenanceManifest({
   root = DEFAULT_ROOT,
   sourceSha,
   sourceTreeSha,
+  repairId,
+  repairOriginMirrorSha,
+  repairBaseSha,
   repository = process.env.GITHUB_REPOSITORY || null,
   ref = process.env.GITHUB_REF || null,
   artifacts,
@@ -205,16 +236,42 @@ export async function buildProvenanceManifest({
     ? assertSha(sourceTreeSha, 'source tree SHA')
     : headTree;
   const mirrorTransport = head !== exactSourceSha;
+  const divergentMirrorTree = mirrorTransport && headTree !== exactSourceTreeSha;
+  let repair = null;
 
   if (mirrorTransport) {
     if (!sourceTreeSha) {
       throw new Error(`source SHA mismatch: manifest=${exactSourceSha} HEAD=${head}; mirror transport requires source tree SHA`);
     }
-    if (headTree !== exactSourceTreeSha) {
-      throw new Error(`source tree mismatch: source=${exactSourceTreeSha} transport=${headTree}`);
+    if (divergentMirrorTree) {
+      if (!repairId || !repairOriginMirrorSha || !repairBaseSha) {
+        throw new Error(`source tree mismatch: source=${exactSourceTreeSha} transport=${headTree}; divergent mirror qualification requires repair identity`);
+      }
+      if (!/^[A-Z0-9._-]{1,64}$/.test(repairId)) throw new Error('repair ID has invalid format');
+      const originSha = assertSha(repairOriginMirrorSha, 'repair origin mirror SHA');
+      const baseSha = assertSha(repairBaseSha, 'repair base SHA');
+      const originTree = assertSha(gitCommitTree(rootReal, originSha), 'repair origin mirror tree SHA');
+      const baseTree = assertSha(gitCommitTree(rootReal, baseSha), 'repair base tree SHA');
+      if (originTree !== exactSourceTreeSha) {
+        throw new Error(`repair origin tree mismatch: origin=${originTree} source=${exactSourceTreeSha}`);
+      }
+      if (assertSha(gitFirstParent(rootReal, head), 'repair candidate parent SHA') !== baseSha) {
+        throw new Error(`repair base mismatch: HEAD parent does not equal ${baseSha}`);
+      }
+      if (!gitIsAncestor(rootReal, originSha, head)) {
+        throw new Error('repair origin is not an ancestor of the mirror candidate');
+      }
+      repair = {
+        id: repairId,
+        originTransportSha: originSha,
+        originTransportTreeSha: originTree,
+        baseTransportSha: baseSha,
+        baseTransportTreeSha: baseTree,
+        convergence: 'provisional-until-reverse-integrated',
+      };
+    } else if (repairId || repairOriginMirrorSha || repairBaseSha) {
+      throw new Error('repair identity is only valid for a divergent mirror tree');
     }
-  } else if (head !== exactSourceSha) {
-    throw new Error(`source SHA mismatch: manifest=${exactSourceSha} HEAD=${head}`);
   }
   assertTrackedSourceClean(rootReal);
   if (!Array.isArray(artifacts) || artifacts.length === 0) {
@@ -242,8 +299,9 @@ export async function buildProvenanceManifest({
       sha: head,
       treeSha: headTree,
       ref: process.env.GITHUB_REF || ref,
-      mode: mirrorTransport ? 'public-mirror' : 'direct',
+      mode: repair ? 'public-mirror-repair' : (mirrorTransport ? 'public-mirror' : 'direct'),
     },
+    ...(repair ? { repair } : {}),
     dependencyLocks,
     artifacts: artifactEntries,
     sboms: sbomEntries,
@@ -339,7 +397,27 @@ export async function verifyProvenanceManifest({
       throw new Error('mirror provenance requires a source tree SHA');
     }
     if (headTree !== expectedTree) {
-      throw new Error(`repository tree does not match provenance source tree: ${headTree} != ${expectedTree}`);
+      if (manifest?.transport?.mode !== 'public-mirror-repair' || !manifest?.repair) {
+        throw new Error(`repository tree does not match provenance source tree: ${headTree} != ${expectedTree}`);
+      }
+      const repairId = manifest.repair.id;
+      if (!/^[A-Z0-9._-]{1,64}$/.test(repairId ?? '')) throw new Error('manifest repair ID has invalid format');
+      const originSha = assertSha(manifest.repair.originTransportSha, 'manifest repair origin SHA');
+      const baseSha = assertSha(manifest.repair.baseTransportSha, 'manifest repair base SHA');
+      const originTree = assertSha(gitCommitTree(rootReal, originSha), 'manifest repair origin tree SHA');
+      const baseTree = assertSha(gitCommitTree(rootReal, baseSha), 'manifest repair base tree SHA');
+      if (originTree !== expectedTree || manifest.repair.originTransportTreeSha !== originTree) {
+        throw new Error('manifest repair origin does not bind the authoritative source tree');
+      }
+      if (manifest.repair.baseTransportTreeSha !== baseTree) {
+        throw new Error('manifest repair base tree mismatch');
+      }
+      if (assertSha(gitFirstParent(rootReal, head), 'repair candidate parent SHA') !== baseSha) {
+        throw new Error('manifest repair base does not equal candidate parent');
+      }
+      if (!gitIsAncestor(rootReal, originSha, head)) {
+        throw new Error('manifest repair origin is not an ancestor of the candidate');
+      }
     }
   }
 
@@ -381,6 +459,9 @@ function parseArgs(argv) {
       case '--manifest': values.manifest = value; break;
       case '--source-sha': values.sourceSha = value; break;
       case '--source-tree-sha': values.sourceTreeSha = value; break;
+      case '--repair-id': values.repairId = value; break;
+      case '--repair-origin-mirror-sha': values.repairOriginMirrorSha = value; break;
+      case '--repair-base-sha': values.repairBaseSha = value; break;
       case '--repository': values.repository = value; break;
       case '--ref': values.ref = value; break;
       default: throw new Error(`unknown argument: ${token}`);
@@ -397,6 +478,9 @@ async function main() {
       root: DEFAULT_ROOT,
       sourceSha: values.sourceSha,
       sourceTreeSha: values.sourceTreeSha,
+      repairId: values.repairId,
+      repairOriginMirrorSha: values.repairOriginMirrorSha,
+      repairBaseSha: values.repairBaseSha,
       repository: values.repository ?? process.env.GITHUB_REPOSITORY ?? null,
       ref: values.ref ?? process.env.GITHUB_REF ?? null,
       artifacts: values.artifacts,

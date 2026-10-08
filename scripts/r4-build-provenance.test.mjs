@@ -134,6 +134,54 @@ try {
   });
   assert.equal(verifiedMirror.transport.sha, mirrorCommit);
 
+  writeFileSync(path.join(root, 'tracked-source.txt'), 'qualified mirror repair\n', 'utf8');
+  git('add', 'tracked-source.txt');
+  git('commit', '-m', 'mirror repair fixture');
+  const repairCommit = git('rev-parse', 'HEAD');
+  const repairManifest = await buildProvenanceManifest({
+    root,
+    sourceSha,
+    sourceTreeSha,
+    repairId: 'R4M-TEST-0001',
+    repairOriginMirrorSha: mirrorCommit,
+    repairBaseSha: mirrorCommit,
+    repository: 'talos/private-source',
+    ref: 'refs/heads/private-candidate',
+    artifacts: ['dist'],
+    locks: ['pnpm-lock.yaml', 'backend/Cargo.lock'],
+    toolchain: { node: 'test-node', pnpm: 'test-pnpm', rustc: 'test-rustc', cargo: 'test-cargo' },
+    ci: { workflow: 'repair-fixture', runId: '3', runAttempt: '1', job: 'test', runnerOs: 'fixture', runnerArch: 'fixture' },
+    generatedAt: '2026-10-08T00:01:00.000Z',
+  });
+  assert.equal(repairManifest.transport.sha, repairCommit);
+  assert.equal(repairManifest.transport.mode, 'public-mirror-repair');
+  assert.equal(repairManifest.repair.id, 'R4M-TEST-0001');
+  assert.equal(repairManifest.repair.originTransportSha, mirrorCommit);
+  assert.equal(repairManifest.repair.baseTransportSha, mirrorCommit);
+
+  writeProvenanceManifest(root, '.talos-provenance/repair.json', repairManifest);
+  const verifiedRepair = await verifyProvenanceManifest({
+    root,
+    manifestPath: '.talos-provenance/repair.json',
+    expectedSourceSha: sourceSha,
+    expectedSourceTreeSha: sourceTreeSha,
+  });
+  assert.equal(verifiedRepair.transport.sha, repairCommit);
+
+  await assert.rejects(
+    buildProvenanceManifest({
+      root,
+      sourceSha,
+      sourceTreeSha,
+      repository: 'talos/private-source',
+      artifacts: ['dist'],
+      locks: ['pnpm-lock.yaml', 'backend/Cargo.lock'],
+    }),
+    /divergent mirror qualification requires repair identity/,
+  );
+
+  git('reset', '--hard', mirrorCommit);
+
   await assert.rejects(
     buildProvenanceManifest({
       root,

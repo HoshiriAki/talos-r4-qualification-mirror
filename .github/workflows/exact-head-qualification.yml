@@ -25,6 +25,41 @@ on:
         description: Private source branch identity used to resolve current-package qualification in mirror mode
         required: false
         type: string
+      repair_id:
+        description: Traceable mirror repair identity; enables bounded divergent-tree qualification
+        required: false
+        type: string
+      repair_origin_mirror_sha:
+        description: Parentless mirror snapshot SHA that binds the authoritative source tree
+        required: false
+        type: string
+      repair_base_sha:
+        description: Immediate pre-repair mirror commit SHA
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      source_commit_sha:
+        required: false
+        type: string
+      source_tree_sha:
+        required: false
+        type: string
+      source_repository:
+        required: false
+        type: string
+      package_branch:
+        required: false
+        type: string
+      repair_id:
+        required: false
+        type: string
+      repair_origin_mirror_sha:
+        required: false
+        type: string
+      repair_base_sha:
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -59,17 +94,36 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
           SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+          REPAIR_ID: ${{ inputs.repair_id || '' }}
+          REPAIR_ORIGIN_MIRROR_SHA: ${{ inputs.repair_origin_mirror_sha || '' }}
+          REPAIR_BASE_SHA: ${{ inputs.repair_base_sha || '' }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           actual_tree="$(git rev-parse HEAD^{tree})"
           if [[ -n "$SOURCE_TREE_SHA" ]]; then
             test -n "$SOURCE_COMMIT_SHA"
-            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            if [[ -n "$REPAIR_ID" ]]; then
+              test -n "$REPAIR_ORIGIN_MIRROR_SHA"
+              test -n "$REPAIR_BASE_SHA"
+              git cat-file -e "${REPAIR_ORIGIN_MIRROR_SHA}^{commit}"
+              git cat-file -e "${REPAIR_BASE_SHA}^{commit}"
+              origin_tree="$(git rev-parse "${REPAIR_ORIGIN_MIRROR_SHA}^{tree}")"
+              test "$origin_tree" = "$SOURCE_TREE_SHA"
+              test "$(git rev-parse "${actual}^")" = "$REPAIR_BASE_SHA"
+              git merge-base --is-ancestor "$REPAIR_ORIGIN_MIRROR_SHA" "$actual"
+              echo "MIRROR_REPAIR_ID=$REPAIR_ID"
+              echo "MIRROR_REPAIR_ORIGIN=$REPAIR_ORIGIN_MIRROR_SHA"
+              echo "MIRROR_REPAIR_BASE=$REPAIR_BASE_SHA"
+              echo "MIRROR_REPAIR_TREE=$actual_tree"
+            else
+              test "$actual_tree" = "$SOURCE_TREE_SHA"
+            fi
             echo "MIRROR_TRANSPORT_HEAD=$actual"
             echo "SOURCE_COMMIT_SHA=$SOURCE_COMMIT_SHA"
             echo "SOURCE_TREE_SHA=$SOURCE_TREE_SHA"
           else
+            test -z "$REPAIR_ID"
             test "$actual" = "$EXPECTED_HEAD"
             git fetch --no-tags origin prototype:refs/remotes/origin/prototype
             echo "EXACT_HEAD=$actual"
@@ -313,9 +367,13 @@ jobs:
         if: ${{ inputs.source_tree_sha == '' }}
         run: git diff --check origin/prototype...HEAD
 
-      - name: Record mirror pre-export whitespace authority
-        if: ${{ inputs.source_tree_sha != '' }}
-        run: echo "Mirror mode uses the private exporter preflight git diff --check before the parentless tree is pushed."
+      - name: Check mirror repair diff whitespace
+        if: ${{ inputs.source_tree_sha != '' && inputs.repair_id != '' }}
+        run: git diff --check "${{ inputs.repair_base_sha }}...HEAD"
+
+      - name: Record exact-tree mirror pre-export whitespace authority
+        if: ${{ inputs.source_tree_sha != '' && inputs.repair_id == '' }}
+        run: echo "Exact-tree mirror mode uses the private exporter preflight git diff --check before the parentless tree is pushed."
 
   quality:
     name: Exact-head quality and PostgreSQL 18
@@ -356,17 +414,36 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
           SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+          REPAIR_ID: ${{ inputs.repair_id || '' }}
+          REPAIR_ORIGIN_MIRROR_SHA: ${{ inputs.repair_origin_mirror_sha || '' }}
+          REPAIR_BASE_SHA: ${{ inputs.repair_base_sha || '' }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           actual_tree="$(git rev-parse HEAD^{tree})"
           if [[ -n "$SOURCE_TREE_SHA" ]]; then
             test -n "$SOURCE_COMMIT_SHA"
-            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            if [[ -n "$REPAIR_ID" ]]; then
+              test -n "$REPAIR_ORIGIN_MIRROR_SHA"
+              test -n "$REPAIR_BASE_SHA"
+              git cat-file -e "${REPAIR_ORIGIN_MIRROR_SHA}^{commit}"
+              git cat-file -e "${REPAIR_BASE_SHA}^{commit}"
+              origin_tree="$(git rev-parse "${REPAIR_ORIGIN_MIRROR_SHA}^{tree}")"
+              test "$origin_tree" = "$SOURCE_TREE_SHA"
+              test "$(git rev-parse "${actual}^")" = "$REPAIR_BASE_SHA"
+              git merge-base --is-ancestor "$REPAIR_ORIGIN_MIRROR_SHA" "$actual"
+              echo "MIRROR_REPAIR_ID=$REPAIR_ID"
+              echo "MIRROR_REPAIR_ORIGIN=$REPAIR_ORIGIN_MIRROR_SHA"
+              echo "MIRROR_REPAIR_BASE=$REPAIR_BASE_SHA"
+              echo "MIRROR_REPAIR_TREE=$actual_tree"
+            else
+              test "$actual_tree" = "$SOURCE_TREE_SHA"
+            fi
             echo "MIRROR_TRANSPORT_HEAD=$actual"
             echo "SOURCE_COMMIT_SHA=$SOURCE_COMMIT_SHA"
             echo "SOURCE_TREE_SHA=$SOURCE_TREE_SHA"
           else
+            test -z "$REPAIR_ID"
             test "$actual" = "$EXPECTED_HEAD"
             git fetch --no-tags origin prototype:refs/remotes/origin/prototype
             echo "EXACT_HEAD=$actual"
@@ -581,15 +658,27 @@ jobs:
           SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
           SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
           SOURCE_REPOSITORY: ${{ inputs.source_repository || '' }}
+          REPAIR_ID: ${{ inputs.repair_id || '' }}
+          REPAIR_ORIGIN_MIRROR_SHA: ${{ inputs.repair_origin_mirror_sha || '' }}
+          REPAIR_BASE_SHA: ${{ inputs.repair_base_sha || '' }}
         run: |
           set -euo pipefail
           if [[ -n "$SOURCE_TREE_SHA" ]]; then
             test -n "$SOURCE_COMMIT_SHA"
             test -n "$SOURCE_REPOSITORY"
+            repair_args=()
+            if [[ -n "$REPAIR_ID" ]]; then
+              repair_args=(
+                --repair-id "$REPAIR_ID"
+                --repair-origin-mirror-sha "$REPAIR_ORIGIN_MIRROR_SHA"
+                --repair-base-sha "$REPAIR_BASE_SHA"
+              )
+            fi
             node scripts/r4-build-provenance.mjs generate \
               --source-sha "$SOURCE_COMMIT_SHA" \
               --source-tree-sha "$SOURCE_TREE_SHA" \
               --repository "$SOURCE_REPOSITORY" \
+              "${repair_args[@]}" \
               --artifact public \
               --artifact backend/target/debug/talos-backend \
               --output .talos-provenance/exact-head.json
@@ -625,7 +714,7 @@ jobs:
   package_qualification:
     name: Current package qualification
     needs: [preflight, quality]
-    if: (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_branch != '')
+    if: (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name != 'pull_request' && inputs.package_branch != '')
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -643,15 +732,28 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           SOURCE_COMMIT_SHA: ${{ inputs.source_commit_sha || '' }}
           SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+          REPAIR_ID: ${{ inputs.repair_id || '' }}
+          REPAIR_ORIGIN_MIRROR_SHA: ${{ inputs.repair_origin_mirror_sha || '' }}
+          REPAIR_BASE_SHA: ${{ inputs.repair_base_sha || '' }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           actual_tree="$(git rev-parse HEAD^{tree})"
           if [[ -n "$SOURCE_TREE_SHA" ]]; then
             test -n "$SOURCE_COMMIT_SHA"
-            test "$actual_tree" = "$SOURCE_TREE_SHA"
+            if [[ -n "$REPAIR_ID" ]]; then
+              test -n "$REPAIR_ORIGIN_MIRROR_SHA"
+              test -n "$REPAIR_BASE_SHA"
+              test "$(git rev-parse "${REPAIR_ORIGIN_MIRROR_SHA}^{tree}")" = "$SOURCE_TREE_SHA"
+              test "$(git rev-parse "${actual}^")" = "$REPAIR_BASE_SHA"
+              git merge-base --is-ancestor "$REPAIR_ORIGIN_MIRROR_SHA" "$actual"
+              echo "PACKAGE_MIRROR_REPAIR_ID=$REPAIR_ID"
+            else
+              test "$actual_tree" = "$SOURCE_TREE_SHA"
+            fi
             echo "PACKAGE_MIRROR_TRANSPORT_HEAD=$actual"
           else
+            test -z "$REPAIR_ID"
             test "$actual" = "$EXPECTED_HEAD"
             echo "EXACT_HEAD=$actual"
           fi
