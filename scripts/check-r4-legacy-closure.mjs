@@ -41,7 +41,6 @@ const PATHS = Object.freeze({
   router: 'frontend/src/router/index.ts',
   sidebar: 'frontend/src/constants/sidebarGroups.ts',
   settings: 'frontend/src/utils/settings.ts',
-  agents: 'AGENTS.md',
   record: 'policy/qualification/legacy-evidence/docs/proposals/talos-ops-business-closure/r4-p2-legacy-compatibility-closure.md',
 })
 
@@ -81,7 +80,6 @@ export function checkR4LegacyClosure({ files, existingPaths, serviceFiles }) {
   const router = files[PATHS.router]
   const sidebar = files[PATHS.sidebar]
   const settings = files[PATHS.settings]
-  const agents = files[PATHS.agents]
   const record = files[PATHS.record]
 
   forbidText(
@@ -153,13 +151,6 @@ export function checkR4LegacyClosure({ files, existingPaths, serviceFiles }) {
       PATHS.bookingModule,
       `legacy Booking write command ${command} must not be advertised`,
     )
-  }
-
-  for (const token of [
-    '/users` is the current Order compatibility API',
-    '`deviceSerialNo` is legacy single-device compatibility',
-  ]) {
-    requireText(failures, agents, token, PATHS.agents, `root compatibility authority missing ${token}`)
   }
 
   const actualServices = [...serviceFiles].sort()

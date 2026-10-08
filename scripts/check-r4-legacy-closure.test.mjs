@@ -10,7 +10,6 @@ const PATHS = {
   router: 'frontend/src/router/index.ts',
   sidebar: 'frontend/src/constants/sidebarGroups.ts',
   settings: 'frontend/src/utils/settings.ts',
-  agents: 'AGENTS.md',
   record: 'policy/qualification/legacy-evidence/docs/proposals/talos-ops-business-closure/r4-p2-legacy-compatibility-closure.md',
 }
 
@@ -26,7 +25,6 @@ function baseline() {
     [PATHS.router]: "{ path: '/app/booking', redirect: '/app/orders' }",
     [PATHS.sidebar]: "{ path: '/app/orders' }",
     [PATHS.settings]: "const HOME_ROUTES = new Set(['/app/orders'])",
-    [PATHS.agents]: '- `/users` is the current Order compatibility API\n- `deviceSerialNo` is legacy single-device compatibility',
     [PATHS.record]: [
       'R4_P1_BASELINE_BOUND',
       'R4_P2_PUBLIC_BOOKING_RETIRED',
