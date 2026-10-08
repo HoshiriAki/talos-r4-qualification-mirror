@@ -344,7 +344,7 @@ expectFailure(
 expectFailure(
   'provenance verify step removed',
   (snapshot) => {
-    snapshot.exactHead = snapshot.exactHead.replace('r4-build-provenance.mjs verify', 'r4-build-provenance.mjs disabled-verify');
+    snapshot.exactHead = snapshot.exactHead.replaceAll('r4-build-provenance.mjs verify', 'r4-build-provenance.mjs disabled-verify');
   },
   'must verify generated provenance',
 );
