@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   identity:
-    name: Resolve mirror repair identity
+    name: Resolve mirror source identity
     runs-on: ubuntu-latest
     outputs:
       source_commit_sha: ${{ steps.identity.outputs.source_commit_sha }}
@@ -27,46 +27,108 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Resolve and validate repair lineage
+      - name: Resolve and validate source snapshot or repair lineage
         id: identity
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "HoshiriAki/talos-r4-qualification-mirror"
+
           head="$(git rev-parse HEAD)"
-          base="$(git rev-parse HEAD^)"
-          origin="$(git rev-list --max-parents=0 HEAD)"
-          test "$(printf '%s\n' "$origin" | wc -l)" -eq 1
-          origin_message="$(git show -s --format=%B "$origin")"
+          head_tree="$(git rev-parse HEAD^{tree})"
+          root="$(git rev-list --max-parents=0 HEAD)"
+          test "$(printf '%s\n' "$root" | wc -l)" -eq 1
           head_message="$(git show -s --format=%B "$head")"
-          source_repository="$(printf '%s\n' "$origin_message" | sed -n 's/^source-repository: //p' | tail -n 1)"
-          source_commit_sha="$(printf '%s\n' "$origin_message" | sed -n 's/^source-commit: //p' | tail -n 1)"
-          source_tree_sha="$(printf '%s\n' "$origin_message" | sed -n 's/^source-tree: //p' | tail -n 1)"
+          root_message="$(git show -s --format=%B "$root")"
+
+          snapshot_id="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-MIRROR-SNAPSHOT-ID: //p' | tail -n 1)"
           repair_id="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-MIRROR-REPAIR-ID: //p' | tail -n 1)"
-          package_branch="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-BRANCH: //p' | tail -n 1)"
+          explicit_source_repository="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-REPOSITORY: //p' | tail -n 1)"
+          explicit_source_commit="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-COMMIT: //p' | tail -n 1)"
+          explicit_source_tree="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-TREE: //p' | tail -n 1)"
+          explicit_package_branch="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-SOURCE-BRANCH: //p' | tail -n 1)"
+          explicit_repair_origin="$(printf '%s\n' "$head_message" | sed -n 's/^TALOS-MIRROR-REPAIR-ORIGIN: //p' | tail -n 1)"
+
+          source_repository=""
+          source_commit_sha=""
+          source_tree_sha=""
+          package_branch=""
+          repair_origin=""
+          repair_base=""
+
+          if [[ -n "$snapshot_id" ]]; then
+            test -z "$repair_id"
+            test -z "$explicit_repair_origin"
+            [[ "$snapshot_id" =~ ^[A-Z0-9._-]{1,96}$ ]]
+            source_repository="$explicit_source_repository"
+            source_commit_sha="$explicit_source_commit"
+            source_tree_sha="$explicit_source_tree"
+            package_branch="$explicit_package_branch"
+            test "$head_tree" = "$source_tree_sha"
+            echo "MIRROR_SNAPSHOT_ID=$snapshot_id"
+            echo "MIRROR_SNAPSHOT_TRANSPORT_HEAD=$head"
+          elif [[ -n "$repair_id" && -n "$explicit_source_commit" ]]; then
+            [[ "$repair_id" =~ ^[A-Z0-9._-]{1,64}$ ]]
+            [[ "$explicit_repair_origin" =~ ^[0-9a-f]{40}$ ]]
+            repair_origin="$explicit_repair_origin"
+            repair_base="$(git rev-parse HEAD^)"
+            source_repository="$explicit_source_repository"
+            source_commit_sha="$explicit_source_commit"
+            source_tree_sha="$explicit_source_tree"
+            package_branch="$explicit_package_branch"
+
+            git cat-file -e "${repair_origin}^{commit}"
+            origin_message="$(git show -s --format=%B "$repair_origin")"
+            origin_source_commit="$(printf '%s\n' "$origin_message" | sed -n 's/^TALOS-SOURCE-COMMIT: //p' | tail -n 1)"
+            origin_source_tree="$(printf '%s\n' "$origin_message" | sed -n 's/^TALOS-SOURCE-TREE: //p' | tail -n 1)"
+            origin_source_repository="$(printf '%s\n' "$origin_message" | sed -n 's/^TALOS-SOURCE-REPOSITORY: //p' | tail -n 1)"
+            test "$origin_source_commit" = "$source_commit_sha"
+            test "$origin_source_tree" = "$source_tree_sha"
+            test "$origin_source_repository" = "$source_repository"
+            test "$(git rev-parse "${repair_origin}^{tree}")" = "$source_tree_sha"
+            git merge-base --is-ancestor "$repair_origin" "$head"
+          else
+            # Backward-compatible bootstrap/repair mode for the original
+            # parentless R4 snapshot. New snapshots must use explicit markers.
+            test -z "$snapshot_id"
+            [[ "$repair_id" =~ ^[A-Z0-9._-]{1,64}$ ]]
+            repair_origin="$root"
+            repair_base="$(git rev-parse HEAD^)"
+            source_repository="$(printf '%s\n' "$root_message" | sed -n 's/^source-repository: //p' | tail -n 1)"
+            source_commit_sha="$(printf '%s\n' "$root_message" | sed -n 's/^source-commit: //p' | tail -n 1)"
+            source_tree_sha="$(printf '%s\n' "$root_message" | sed -n 's/^source-tree: //p' | tail -n 1)"
+            package_branch="$explicit_package_branch"
+            test "$(git rev-parse "${repair_origin}^{tree}")" = "$source_tree_sha"
+            git merge-base --is-ancestor "$repair_origin" "$head"
+          fi
+
           test "$source_repository" = "HoshiriAki/TESSERACT-WAREHOUSiNG"
           [[ "$source_commit_sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$source_tree_sha" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$origin" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$base" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$repair_id" =~ ^[A-Z0-9._-]{1,64}$ ]]
           [[ "$package_branch" =~ ^[A-Za-z0-9._/-]+$ ]]
           [[ "$package_branch" != *..* ]]
           [[ "$package_branch" != *@\{* ]]
-          test "$(git rev-parse "${origin}^{tree}")" = "$source_tree_sha"
-          git merge-base --is-ancestor "$origin" "$head"
+
+          if [[ -n "$repair_id" ]]; then
+            [[ "$repair_origin" =~ ^[0-9a-f]{40}$ ]]
+            [[ "$repair_base" =~ ^[0-9a-f]{40}$ ]]
+          else
+            test -z "$repair_origin"
+            test -z "$repair_base"
+          fi
+
           {
             echo "source_commit_sha=$source_commit_sha"
             echo "source_tree_sha=$source_tree_sha"
             echo "source_repository=$source_repository"
             echo "package_branch=$package_branch"
             echo "repair_id=$repair_id"
-            echo "repair_origin_mirror_sha=$origin"
-            echo "repair_base_sha=$base"
+            echo "repair_origin_mirror_sha=$repair_origin"
+            echo "repair_base_sha=$repair_base"
           } >> "$GITHUB_OUTPUT"
 
   qualification:
-    name: Qualify mirror repair
+    name: Qualify mirror source
     needs: identity
     uses: ./.github/workflows/exact-head-qualification.yml
     with:
