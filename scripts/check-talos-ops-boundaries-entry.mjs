@@ -4,38 +4,35 @@ import { pathToFileURL } from 'node:url'
 import process from 'node:process'
 import {
   BASELINE_COMMIT,
+  DEFAULT_BASELINE_PROJECTION_PATH,
   runRepositoryCheck,
 } from './check-talos-ops-boundaries.mjs'
 
 export const BASELINE_SHA_ENV = 'TALOS_OPS_BASELINE_SHA'
 export const BASELINE_LOCAL_COMMIT_ENV = 'TALOS_OPS_BASELINE_LOCAL_COMMIT'
-export const STRICT_ZERO_DEBT_ENV = 'TALOS_OPS_STRICT_ZERO_DEBT'
+export const BASELINE_PROJECTION_FILE_ENV = 'TALOS_OPS_BASELINE_PROJECTION_FILE'
 
 function present(value) {
   return typeof value === 'string' && value.trim().length > 0
 }
 
 export function resolveBaselineProjection(options) {
-  const sourceSha = options === undefined
-    ? process.env[BASELINE_SHA_ENV]
-    : options.sourceSha
-  const localCommit = options === undefined
-    ? process.env[BASELINE_LOCAL_COMMIT_ENV]
-    : options.localCommit
-  const strictZeroDebt = options === undefined
-    ? process.env[STRICT_ZERO_DEBT_ENV] === '1'
-    : options.strictZeroDebt === true
+  const sourceSha = options === undefined ? process.env[BASELINE_SHA_ENV] : options.sourceSha
+  const localCommit = options === undefined ? process.env[BASELINE_LOCAL_COMMIT_ENV] : options.localCommit
+  const projectionFile = options === undefined ? process.env[BASELINE_PROJECTION_FILE_ENV] : options.projectionFile
   const hasSourceSha = present(sourceSha)
   const hasLocalCommit = present(localCommit)
+  const hasProjectionFile = present(projectionFile)
 
-  if (strictZeroDebt) {
+  if (hasProjectionFile) {
     if (hasSourceSha || hasLocalCommit) {
-      throw new Error(`${STRICT_ZERO_DEBT_ENV} cannot be combined with ${BASELINE_SHA_ENV} or ${BASELINE_LOCAL_COMMIT_ENV}`)
+      throw new Error(`${BASELINE_PROJECTION_FILE_ENV} cannot be combined with ${BASELINE_SHA_ENV} or ${BASELINE_LOCAL_COMMIT_ENV}`)
     }
     return {
       authorityCommit: BASELINE_COMMIT,
       comparisonCommit: null,
-      mode: 'strict-zero-debt',
+      projectionFile,
+      mode: 'canonical-fingerprint-projection',
     }
   }
 
@@ -79,7 +76,9 @@ export function runProjectedRepositoryCheck(options) {
   const projection = resolveBaselineProjection(options)
   const result = runRepositoryCheck({
     baselineCommit: projection.comparisonCommit ?? BASELINE_COMMIT,
-    strictZeroDebt: projection.mode === 'strict-zero-debt',
+    baselineProjectionPath: projection.mode === 'canonical-fingerprint-projection'
+      ? projection.projectionFile ?? DEFAULT_BASELINE_PROJECTION_PATH
+      : null,
   })
   return {
     ...result,
@@ -106,8 +105,8 @@ function main() {
 
   const projectionSuffix = result.baselineMode === 'git-object'
     ? ''
-    : result.baselineMode === 'strict-zero-debt'
-      ? ' via strict zero-debt projection'
+    : result.baselineMode === 'canonical-fingerprint-projection'
+      ? ` via canonical fingerprint projection ${result.baselineProjectionPath}`
       : ` via local projection ${result.comparisonBaselineCommit}`
 
   if (result.failures.length > 0) {

@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import process from 'node:process'
 
 export const BASELINE_COMMIT = '5cf781fb69cf898a9be0530099724e62c134b031'
+export const BASELINE_TREE = '0a6302c08e84f3e73cc11e94ae8f653e3b159d14'
+export const DEFAULT_BASELINE_PROJECTION_PATH = 'policy/qualification/talos-ops-baseline-projection.json'
+const BASELINE_PROJECTION_SCHEMA = 'talos-ops-fingerprint-projection-v1'
 export const REMOVED_LEGACY_SF_PATHS = [
   'backend/src/routes/sf_express.rs',
   'backend/src/services/sf_express.rs',
@@ -167,6 +171,59 @@ function comparisonEvidence(entry) {
 
 function findingKey(entry) {
   return JSON.stringify([entry.rule, comparisonPath(entry.path), comparisonEvidence(entry)])
+}
+
+export function fingerprintFinding(entry) {
+  return createHash('sha256').update(findingKey(entry), 'utf8').digest('hex')
+}
+
+export function validateBaselineProjection(projection) {
+  if (projection === null || typeof projection !== 'object' || Array.isArray(projection)) {
+    throw new Error('baseline projection must be a JSON object')
+  }
+  if (projection.schema !== BASELINE_PROJECTION_SCHEMA) throw new Error(`baseline projection schema must be ${BASELINE_PROJECTION_SCHEMA}`)
+  if (projection.authorityCommit !== BASELINE_COMMIT) throw new Error(`baseline projection authorityCommit must equal ${BASELINE_COMMIT}`)
+  if (projection.authorityTree !== BASELINE_TREE) throw new Error(`baseline projection authorityTree must equal ${BASELINE_TREE}`)
+  if (projection.keyHash !== 'sha256' || projection.keyEncoding !== 'utf8-json-v1') throw new Error('baseline projection hash contract must be sha256 over utf8-json-v1 finding keys')
+  if (projection.allowances === null || typeof projection.allowances !== 'object' || Array.isArray(projection.allowances)) throw new Error('baseline projection allowances must be an object')
+  const entries = Object.entries(projection.allowances)
+  for (const [hash, count] of entries) {
+    if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error(`invalid baseline projection fingerprint: ${hash}`)
+    if (!Number.isSafeInteger(count) || count <= 0) throw new Error(`invalid baseline projection occurrence count for ${hash}`)
+  }
+  const occurrences = entries.reduce((sum, [, count]) => sum + count, 0)
+  if (projection.uniqueKeyCount !== entries.length) throw new Error('baseline projection uniqueKeyCount mismatch')
+  if (projection.occurrenceCount !== occurrences) throw new Error('baseline projection occurrenceCount mismatch')
+  return projection
+}
+
+export function compareFindingProjection(projection, currentFindings) {
+  const validated = validateBaselineProjection(projection)
+  const current = new Map()
+  for (const finding of currentFindings) {
+    const hash = fingerprintFinding(finding)
+    const actual = current.get(hash) ?? { count: 0, finding }
+    actual.count += 1
+    current.set(hash, actual)
+  }
+  const failures = []
+  for (const [hash, actual] of current) {
+    const permitted = validated.allowances[hash] ?? 0
+    if (actual.count > permitted) failures.push({ ...actual.finding, occurrences: actual.count - permitted })
+  }
+  return failures.sort((left, right) => findingKey(left).localeCompare(findingKey(right)))
+}
+
+function loadBaselineProjection(root, path) {
+  const absolute = join(root, path)
+  if (!existsSync(absolute)) throw new Error(`baseline projection file is missing: ${path}`)
+  let parsed
+  try {
+    parsed = JSON.parse(readFileSync(absolute, 'utf8'))
+  } catch (error) {
+    throw new Error(`baseline projection is not valid JSON: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  return validateBaselineProjection(parsed)
 }
 
 function counts(findings) {
@@ -570,26 +627,32 @@ function checkProposalDocuments(root) {
 export function runRepositoryCheck({
   root = process.cwd(),
   baselineCommit = BASELINE_COMMIT,
-  strictZeroDebt = false,
+  baselineProjectionPath = null,
 } = {}) {
-  if (!strictZeroDebt) git(root, ['cat-file', '-e', `${baselineCommit}^{commit}`])
+  const projectionMode = typeof baselineProjectionPath === 'string' && baselineProjectionPath.length > 0
+  if (!projectionMode) git(root, ['cat-file', '-e', `${baselineCommit}^{commit}`])
+  else if (baselineCommit !== BASELINE_COMMIT) throw new Error('fingerprint projection may only represent the canonical TALOS Operations baseline')
 
   const currentPaths = relevantCurrentPaths(root)
-  const oldPaths = strictZeroDebt ? [] : baselinePaths(root, baselineCommit)
+  const oldPaths = projectionMode ? [] : baselinePaths(root, baselineCommit)
   const allPaths = [...new Set([...currentPaths, ...oldPaths])]
 
   const currentFiles = loadFiles(root, allPaths, (path) => {
     const absolute = join(root, path)
     return existsSync(absolute) ? readFileSync(absolute, 'utf8') : null
   })
-  const baselineFiles = strictZeroDebt
+  const baselineFiles = projectionMode
     ? {}
     : loadFiles(root, allPaths, (path) => readBaselineFile(root, baselineCommit, path))
 
-  const baselineFindings = strictZeroDebt ? [] : collectFindings(baselineFiles)
+  const baselineProjection = projectionMode ? loadBaselineProjection(root, baselineProjectionPath) : null
+  const baselineFindings = projectionMode ? [] : collectFindings(baselineFiles)
   const currentFindings = collectFindings(currentFiles)
+  const fingerprintFailures = projectionMode
+    ? compareFindingProjection(baselineProjection, currentFindings)
+    : compareFindingSets(baselineFindings, currentFindings)
   const failures = [
-    ...compareFindingSets(baselineFindings, currentFindings),
+    ...fingerprintFailures,
     ...checkProposalDocuments(root),
     ...checkRemovedLegacySfPaths(currentFiles),
     ...checkRemovedUnmountedReservationAdapterPath(currentFiles),
@@ -599,7 +662,15 @@ export function runRepositoryCheck({
     ...checkApplicationServicesBoundary(currentFiles),
   ]
 
-  return { baselineCommit, baselineMode: strictZeroDebt ? 'strict-zero-debt' : 'git-object', baselineFindings, currentFindings, failures }
+  return {
+    baselineCommit,
+    baselineMode: projectionMode ? 'canonical-fingerprint-projection' : 'git-object',
+    baselineProjectionPath: projectionMode ? baselineProjectionPath : null,
+    baselineProjection,
+    baselineFindings,
+    currentFindings,
+    failures,
+  }
 }
 
 function main() {

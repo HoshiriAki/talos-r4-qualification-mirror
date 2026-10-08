@@ -3,8 +3,8 @@
 import assert from 'node:assert/strict'
 import {
   BASELINE_LOCAL_COMMIT_ENV,
+  BASELINE_PROJECTION_FILE_ENV,
   BASELINE_SHA_ENV,
-  STRICT_ZERO_DEBT_ENV,
   resolveBaselineProjection,
 } from './check-talos-ops-boundaries-entry.mjs'
 import { BASELINE_COMMIT } from './check-talos-ops-boundaries.mjs'
@@ -42,19 +42,20 @@ assert.deepEqual(
 )
 
 assert.deepEqual(
-  resolveBaselineProjection({ sourceSha: undefined, localCommit: undefined, strictZeroDebt: true }),
+  resolveBaselineProjection({ sourceSha: undefined, localCommit: undefined, projectionFile: 'policy/qualification/talos-ops-baseline-projection.json' }),
   {
     authorityCommit: BASELINE_COMMIT,
     comparisonCommit: null,
-    mode: 'strict-zero-debt',
+    projectionFile: 'policy/qualification/talos-ops-baseline-projection.json',
+    mode: 'canonical-fingerprint-projection',
   },
-  'public mirror qualification may tighten the historical allowance set to zero without requiring private history',
+  'public mirror qualification may use the canonical fingerprint projection without requiring private history',
 )
 
 assert.throws(
-  () => resolveBaselineProjection({ sourceSha: BASELINE_COMMIT, localCommit: projectedCommit, strictZeroDebt: true }),
-  new RegExp(`${STRICT_ZERO_DEBT_ENV} cannot be combined`),
-  'strict zero-debt mode must not be mixed with an archive projection',
+  () => resolveBaselineProjection({ sourceSha: BASELINE_COMMIT, localCommit: projectedCommit, projectionFile: 'projection.json' }),
+  new RegExp(`${BASELINE_PROJECTION_FILE_ENV} cannot be combined`),
+  'canonical fingerprint projection mode must not be mixed with an archive projection',
 )
 
 assert.throws(

@@ -2,6 +2,8 @@
 
 import assert from 'node:assert/strict'
 import {
+  BASELINE_COMMIT,
+  BASELINE_TREE,
   CORE_PRIMITIVE_DISPOSITION,
   checkApplicationServicesBoundary,
   checkBoundedStaleDeadSuppressions,
@@ -10,7 +12,10 @@ import {
   checkRemovedLegacySfPaths,
   checkRemovedUnmountedReservationAdapterPath,
   collectFindings,
+  compareFindingProjection,
   compareFindingSets,
+  fingerprintFinding,
+  validateBaselineProjection,
 } from './check-talos-ops-boundaries.mjs'
 
 function failures(baselineFiles, currentFiles) {
@@ -20,6 +25,25 @@ function failures(baselineFiles, currentFiles) {
 function rules(items) {
   return new Set(items.map((item) => item.rule))
 }
+
+const projectedLegacyFinding = collectFindings({
+  'frontend/src/stores/orders.ts': 'const patch = {} as Partial<Order>',
+})[0]
+const projectedLegacyHash = fingerprintFinding(projectedLegacyFinding)
+const syntheticProjection = {
+  schema: 'talos-ops-fingerprint-projection-v1',
+  authorityCommit: BASELINE_COMMIT,
+  authorityTree: BASELINE_TREE,
+  keyHash: 'sha256',
+  keyEncoding: 'utf8-json-v1',
+  coverage: 'unit-test',
+  uniqueKeyCount: 1,
+  occurrenceCount: 1,
+  allowances: { [projectedLegacyHash]: 1 },
+}
+assert.deepEqual(compareFindingProjection(syntheticProjection, [projectedLegacyFinding]), [], 'projected legacy finding must be allowed at its frozen occurrence count')
+assert.equal(compareFindingProjection(syntheticProjection, [projectedLegacyFinding, projectedLegacyFinding])[0]?.occurrences, 1, 'projected occurrence expansion must fail closed')
+assert.throws(() => validateBaselineProjection({ ...syntheticProjection, authorityCommit: '0'.repeat(40) }), /authorityCommit/, 'projection claiming a different canonical authority must fail closed')
 
 const unchangedBaseline = {
   'backend/src/routes/orders.rs': 'fn route() { sqlx::query("UPDATE orders SET status = ? WHERE id = ?"); }',
@@ -565,4 +589,4 @@ assert.deepEqual(
   'TALOS-OPS-011 through TALOS-OPS-015 remain unchanged by TALOS-OPS-016',
 )
 
-console.log('TALOS Operations boundary checker self-test passed: 68 cases.')
+console.log('TALOS Operations boundary checker self-test passed: 71 cases.')
