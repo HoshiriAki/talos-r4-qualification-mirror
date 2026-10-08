@@ -44,7 +44,7 @@ const cases = [
   {
     name: 'requires documented active PricePage cutover',
     path: 'policy/qualification/legacy-evidence/docs/proposals/talos-ops-business-closure/r1-p2-quote-pricing-orderline.md',
-    mutate: source => source.replace('PRICEPAGE_QUOTE_V2_CUTOVER', 'PRICEPAGE_CUTOVER_REMOVED'),
+    mutate: source => source.replaceAll('PRICEPAGE_QUOTE_V2_CUTOVER', 'PRICEPAGE_CUTOVER_REMOVED'),
   },
 ]
 
