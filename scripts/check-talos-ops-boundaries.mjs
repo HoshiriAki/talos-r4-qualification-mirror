@@ -567,20 +567,26 @@ function checkProposalDocuments(root) {
   return failures
 }
 
-export function runRepositoryCheck({ root = process.cwd(), baselineCommit = BASELINE_COMMIT } = {}) {
-  git(root, ['cat-file', '-e', `${baselineCommit}^{commit}`])
+export function runRepositoryCheck({
+  root = process.cwd(),
+  baselineCommit = BASELINE_COMMIT,
+  strictZeroDebt = false,
+} = {}) {
+  if (!strictZeroDebt) git(root, ['cat-file', '-e', `${baselineCommit}^{commit}`])
 
   const currentPaths = relevantCurrentPaths(root)
-  const oldPaths = baselinePaths(root, baselineCommit)
+  const oldPaths = strictZeroDebt ? [] : baselinePaths(root, baselineCommit)
   const allPaths = [...new Set([...currentPaths, ...oldPaths])]
 
   const currentFiles = loadFiles(root, allPaths, (path) => {
     const absolute = join(root, path)
     return existsSync(absolute) ? readFileSync(absolute, 'utf8') : null
   })
-  const baselineFiles = loadFiles(root, allPaths, (path) => readBaselineFile(root, baselineCommit, path))
+  const baselineFiles = strictZeroDebt
+    ? {}
+    : loadFiles(root, allPaths, (path) => readBaselineFile(root, baselineCommit, path))
 
-  const baselineFindings = collectFindings(baselineFiles)
+  const baselineFindings = strictZeroDebt ? [] : collectFindings(baselineFiles)
   const currentFindings = collectFindings(currentFiles)
   const failures = [
     ...compareFindingSets(baselineFindings, currentFindings),
@@ -593,7 +599,7 @@ export function runRepositoryCheck({ root = process.cwd(), baselineCommit = BASE
     ...checkApplicationServicesBoundary(currentFiles),
   ]
 
-  return { baselineCommit, baselineFindings, currentFindings, failures }
+  return { baselineCommit, baselineMode: strictZeroDebt ? 'strict-zero-debt' : 'git-object', baselineFindings, currentFindings, failures }
 }
 
 function main() {

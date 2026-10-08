@@ -96,6 +96,16 @@ const cases = [
     }),
   },
   {
+    name: 'requires strict zero-debt baseline in mirror qualification',
+    mutate: value => ({
+      ...value,
+      exactHeadSource: value.exactHeadSource.replace(
+        '            echo "TALOS_OPS_STRICT_ZERO_DEBT=1" >> "$GITHUB_ENV"\n',
+        '',
+      ),
+    }),
+  },
+  {
     name: 'requires exact-head Rust provenance build step',
     mutate: value => ({
       ...value,

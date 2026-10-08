@@ -9,6 +9,7 @@ import {
 
 export const BASELINE_SHA_ENV = 'TALOS_OPS_BASELINE_SHA'
 export const BASELINE_LOCAL_COMMIT_ENV = 'TALOS_OPS_BASELINE_LOCAL_COMMIT'
+export const STRICT_ZERO_DEBT_ENV = 'TALOS_OPS_STRICT_ZERO_DEBT'
 
 function present(value) {
   return typeof value === 'string' && value.trim().length > 0
@@ -21,8 +22,22 @@ export function resolveBaselineProjection(options) {
   const localCommit = options === undefined
     ? process.env[BASELINE_LOCAL_COMMIT_ENV]
     : options.localCommit
+  const strictZeroDebt = options === undefined
+    ? process.env[STRICT_ZERO_DEBT_ENV] === '1'
+    : options.strictZeroDebt === true
   const hasSourceSha = present(sourceSha)
   const hasLocalCommit = present(localCommit)
+
+  if (strictZeroDebt) {
+    if (hasSourceSha || hasLocalCommit) {
+      throw new Error(`${STRICT_ZERO_DEBT_ENV} cannot be combined with ${BASELINE_SHA_ENV} or ${BASELINE_LOCAL_COMMIT_ENV}`)
+    }
+    return {
+      authorityCommit: BASELINE_COMMIT,
+      comparisonCommit: null,
+      mode: 'strict-zero-debt',
+    }
+  }
 
   if (hasSourceSha !== hasLocalCommit) {
     throw new Error(`${BASELINE_SHA_ENV} and ${BASELINE_LOCAL_COMMIT_ENV} must be provided together`)
@@ -62,7 +77,10 @@ export function resolveBaselineProjection(options) {
 
 export function runProjectedRepositoryCheck(options) {
   const projection = resolveBaselineProjection(options)
-  const result = runRepositoryCheck({ baselineCommit: projection.comparisonCommit })
+  const result = runRepositoryCheck({
+    baselineCommit: projection.comparisonCommit ?? BASELINE_COMMIT,
+    strictZeroDebt: projection.mode === 'strict-zero-debt',
+  })
   return {
     ...result,
     authorityBaselineCommit: projection.authorityCommit,
@@ -88,7 +106,9 @@ function main() {
 
   const projectionSuffix = result.baselineMode === 'git-object'
     ? ''
-    : ` via local projection ${result.comparisonBaselineCommit}`
+    : result.baselineMode === 'strict-zero-debt'
+      ? ' via strict zero-debt projection'
+      : ` via local projection ${result.comparisonBaselineCommit}`
 
   if (result.failures.length > 0) {
     console.error(`TALOS Operations boundary check failed against ${result.authorityBaselineCommit}${projectionSuffix}:`)

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   BASELINE_LOCAL_COMMIT_ENV,
   BASELINE_SHA_ENV,
+  STRICT_ZERO_DEBT_ENV,
   resolveBaselineProjection,
 } from './check-talos-ops-boundaries-entry.mjs'
 import { BASELINE_COMMIT } from './check-talos-ops-boundaries.mjs'
@@ -40,6 +41,22 @@ assert.deepEqual(
   'an exact baseline archive may be projected through a local commit while retaining canonical authority identity',
 )
 
+assert.deepEqual(
+  resolveBaselineProjection({ sourceSha: undefined, localCommit: undefined, strictZeroDebt: true }),
+  {
+    authorityCommit: BASELINE_COMMIT,
+    comparisonCommit: null,
+    mode: 'strict-zero-debt',
+  },
+  'public mirror qualification may tighten the historical allowance set to zero without requiring private history',
+)
+
+assert.throws(
+  () => resolveBaselineProjection({ sourceSha: BASELINE_COMMIT, localCommit: projectedCommit, strictZeroDebt: true }),
+  new RegExp(`${STRICT_ZERO_DEBT_ENV} cannot be combined`),
+  'strict zero-debt mode must not be mixed with an archive projection',
+)
+
 assert.throws(
   () => resolveBaselineProjection({ sourceSha: BASELINE_COMMIT, localCommit: undefined }),
   new RegExp(`${BASELINE_SHA_ENV} and ${BASELINE_LOCAL_COMMIT_ENV} must be provided together`),
@@ -58,4 +75,4 @@ assert.throws(
   'an abbreviated or malformed local projection id must fail closed',
 )
 
-console.log('TALOS Operations baseline projection self-test passed: 6 cases.')
+console.log('TALOS Operations baseline projection self-test passed: 8 cases.')

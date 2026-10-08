@@ -154,6 +154,7 @@ export function validateCiExecutionPolicy({
     'Final exact-head whitespace check',
     "'agent/r4-p*-*'",
     'Current package qualification',
+    'TALOS_OPS_STRICT_ZERO_DEBT=1',
     'ci-package-qualification.mjs',
     'ci-run-package-qualification.mjs',
   ]) {
