@@ -328,7 +328,7 @@ expectFailure(
 expectFailure(
   'frontend artifact removed from provenance',
   (snapshot) => {
-    snapshot.exactHead = snapshot.exactHead.replace('--artifact public', '');
+    snapshot.exactHead = snapshot.exactHead.replaceAll('--artifact public', '');
   },
   'built frontend artifact',
 );
@@ -336,7 +336,7 @@ expectFailure(
 expectFailure(
   'backend artifact removed from provenance',
   (snapshot) => {
-    snapshot.exactHead = snapshot.exactHead.replace('--artifact backend/target/debug/talos-backend', '');
+    snapshot.exactHead = snapshot.exactHead.replaceAll('--artifact backend/target/debug/talos-backend', '');
   },
   'built backend binary',
 );
