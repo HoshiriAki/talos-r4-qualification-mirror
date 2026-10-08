@@ -760,11 +760,19 @@ jobs:
               test "$actual_tree" = "$SOURCE_TREE_SHA"
             fi
             echo "PACKAGE_MIRROR_TRANSPORT_HEAD=$actual"
+            qualified_source_sha="$SOURCE_COMMIT_SHA"
+            qualified_source_tree="$SOURCE_TREE_SHA"
           else
             test -z "$REPAIR_ID"
             test "$actual" = "$EXPECTED_HEAD"
             echo "EXACT_HEAD=$actual"
+            qualified_source_sha="$EXPECTED_HEAD"
+            qualified_source_tree="$actual_tree"
           fi
+          {
+            echo "TALOS_QUALIFIED_SOURCE_SHA=$qualified_source_sha"
+            echo "TALOS_QUALIFIED_SOURCE_TREE_SHA=$qualified_source_tree"
+          } >> "$GITHUB_ENV"
 
       - name: Resolve current package qualification
         id: package
@@ -792,6 +800,7 @@ jobs:
         with:
           name: current-package-${{ steps.package.outputs.label }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .talos-evidence
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
 
