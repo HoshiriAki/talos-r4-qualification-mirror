@@ -193,6 +193,11 @@ assert.equal(capabilities.idempotency.machineExecute.universalReplayGuarantee, f
 }
 
 {
+  const failures = check(mutatedAll(paths.generator, 'ORDER_USERS_REPLACEMENT_PATH', 'ORDER_USERS_REPLACEMENT_REMOVED'))
+  assert(failures.some(failure => failure.includes('ORDER_USERS_REPLACEMENT_PATH')))
+}
+
+{
   const failures = check(mutatedAll(paths.workflow, 'pnpm quality:r4-public-api:test', 'echo skipped-r4-p4-test'))
   assert(failures.some(failure => failure.includes('pnpm quality:r4-public-api:test')))
 }

@@ -211,7 +211,7 @@ export function check(read) {
     'MACHINE_MIGRATION', 'machineVersion(machineMigration)',
     'ORDER_V2_ROUTE', 'orderV2Pagination(orderV2)',
     'P2_CLOSURE', 'compatibilityLifecycle(p2)',
-    'ORDER_USERS_COMPATIBILITY_HOLD', 'DEVICE_SERIAL_COMPATIBILITY_HOLD',
+    'ORDER_USERS_COMPATIBILITY_HOLD', 'ORDER_USERS_REPLACEMENT_PATH', 'DEVICE_SERIAL_COMPATIBILITY_HOLD',
     'handMaintainedEndpointCopy: false', 'deprecationDate: null', 'sunsetDate: null',
     'genericCursorContract: null', 'webSocketPublicSurface: false',
     'ssePublicSurface: false', "process.argv.includes('--check')",

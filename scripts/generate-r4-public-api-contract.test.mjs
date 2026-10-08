@@ -144,6 +144,7 @@ for (const { moduleName, factoryName } of mountedRouteFactories(actualRoutesMod)
 
 const actualContract = contract()
 validate(actualContract)
+assert.equal(actualContract.lifecycle.routeHolds[0].replacement, '/api/v2/orders')
 assert(actualContract.endpoints.some(endpoint => endpoint.method === 'GET' && endpoint.path === '/metrics'))
 assert(actualContract.endpoints.some(endpoint => endpoint.method === 'GET' && endpoint.path === '/ready'))
 assert(!actualContract.endpoints.some(endpoint => endpoint.path === '/webhooks/sf-express'))

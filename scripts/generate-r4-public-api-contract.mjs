@@ -283,8 +283,8 @@ function compatibilityLifecycle(source) {
   for (const marker of ['ORDER_USERS_COMPATIBILITY_HOLD', 'DEVICE_SERIAL_COMPATIBILITY_HOLD']) {
     if (!source.includes(marker)) throw new Error(`P2 compatibility marker missing: ${marker}`)
   }
-  const replacement = source.match(/replacement direction:\s*(\/api\/v2\/orders)/)?.[1]
-  if (!replacement) throw new Error('P2 /users replacement direction missing')
+  const replacement = source.match(/^ORDER_USERS_REPLACEMENT_PATH=(\/api\/v2\/orders)$/m)?.[1]
+  if (!replacement) throw new Error('P2 /users replacement projection missing or invalid')
   return {
     routeHolds: [
       {
