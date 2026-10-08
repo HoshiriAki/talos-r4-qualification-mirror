@@ -363,17 +363,22 @@ jobs:
           node scripts/check-r3-machine-simulation-boundary.mjs
           node scripts/check-r3-machine-simulation-boundary.test.mjs
 
-      - name: Check exact-head diff whitespace
-        if: ${{ inputs.source_tree_sha == '' }}
-        run: git diff --check origin/prototype...HEAD
-
-      - name: Check mirror repair diff whitespace
-        if: ${{ inputs.source_tree_sha != '' && inputs.repair_id != '' }}
-        run: git diff --check "${{ inputs.repair_base_sha }}...HEAD"
-
-      - name: Record exact-tree mirror pre-export whitespace authority
-        if: ${{ inputs.source_tree_sha != '' && inputs.repair_id == '' }}
-        run: echo "Exact-tree mirror mode uses the private exporter preflight git diff --check before the parentless tree is pushed."
+      - name: Check exact-head or mirror-repair whitespace authority
+        shell: bash
+        env:
+          SOURCE_TREE_SHA: ${{ inputs.source_tree_sha || '' }}
+          REPAIR_ID: ${{ inputs.repair_id || '' }}
+          REPAIR_BASE_SHA: ${{ inputs.repair_base_sha || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SOURCE_TREE_SHA" ]]; then
+            git diff --check origin/prototype...HEAD
+          elif [[ -n "$REPAIR_ID" ]]; then
+            test -n "$REPAIR_BASE_SHA"
+            git diff --check "${REPAIR_BASE_SHA}...HEAD"
+          else
+            echo "Exact-tree mirror mode uses the private exporter preflight git diff --check before the parentless tree is pushed."
+          fi
 
   quality:
     name: Exact-head quality and PostgreSQL 18
