@@ -96,11 +96,11 @@ const cases = [
     }),
   },
   {
-    name: 'requires strict zero-debt baseline in mirror qualification',
+    name: 'requires canonical fingerprint baseline projection in mirror qualification',
     mutate: value => ({
       ...value,
       exactHeadSource: value.exactHeadSource.replace(
-        '            echo "TALOS_OPS_STRICT_ZERO_DEBT=1" >> "$GITHUB_ENV"\n',
+        '            echo "TALOS_OPS_BASELINE_PROJECTION_FILE=policy/qualification/talos-ops-baseline-projection.json" >> "$GITHUB_ENV"\n',
         '',
       ),
     }),
