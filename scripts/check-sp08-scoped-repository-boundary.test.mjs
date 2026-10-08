@@ -13,6 +13,7 @@ import { checkSp05Projection } from './check-sp05-module-kit-projection.mjs'
 import { checkSp06ApplicationServicesContract } from './check-sp06-application-services-contract.mjs'
 import { checkSp07ModuleFactoryWorkerBoundary } from './check-sp07-module-factory-worker-boundary.mjs'
 import {
+  CHANGED_PATH_BASE_OBJECT_ENV,
   checkSp08ScopedRepositoryBoundary,
   discoverChangedPaths,
 } from './check-sp08-scoped-repository-boundary.mjs'
@@ -201,10 +202,23 @@ assert.deepEqual(
 )
 const discoveryFailure = discoverChangedPaths('/repo', () => { throw new Error('boom') })
 expectFailure(40, clean, 'changed-path discovery failed closed', discoveryFailure)
+let committedArgs = null
+const mirrorBase = 'a'.repeat(40)
+const mirrorChanged = discoverChangedPaths('/repo', (_command, args) => {
+  if (args.length === 4 && args[0] === 'diff' && args[1] === '--name-only') {
+    committedArgs = args
+    return 'scripts/mirror-repair.mjs\n'
+  }
+  return ''
+}, { baseObject: mirrorBase })
+assert.deepEqual(committedArgs, ['diff', '--name-only', mirrorBase, 'HEAD'], '41. mirror discovery must compare the explicit source-tree object to HEAD')
+assert.deepEqual(mirrorChanged, ['scripts/mirror-repair.mjs'], '42. mirror discovery must preserve changed paths from the explicit base object')
+const malformedMirrorBase = discoverChangedPaths('/repo', () => '', { baseObject: 'deadbeef' })
+assert(malformedMirrorBase[0]?.includes(CHANGED_PATH_BASE_OBJECT_ENV), '43. malformed mirror base object must fail closed')
 assert.deepEqual(
   checkSp08ScopedRepositoryBoundary(clean, stagedPaths('policy/qualification/legacy-evidence/docs/README.md')),
   [],
-  '41. ordinary staged path remains allowed',
+  '44. ordinary staged path remains allowed',
 )
 
 console.log('SP-08 scoped repository boundary checker self-test passed.')

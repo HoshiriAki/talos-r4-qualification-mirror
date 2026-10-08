@@ -122,6 +122,7 @@ jobs:
             echo "MIRROR_TRANSPORT_HEAD=$actual"
             echo "SOURCE_COMMIT_SHA=$SOURCE_COMMIT_SHA"
             echo "SOURCE_TREE_SHA=$SOURCE_TREE_SHA"
+            echo "TALOS_CHANGED_PATH_BASE_OBJECT=$SOURCE_TREE_SHA" >> "$GITHUB_ENV"
             echo "TALOS_OPS_BASELINE_PROJECTION_FILE=policy/qualification/talos-ops-baseline-projection.json" >> "$GITHUB_ENV"
             echo "TALOS_OPS_BASELINE_MODE=canonical-fingerprint-projection"
           else

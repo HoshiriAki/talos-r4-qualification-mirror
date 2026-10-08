@@ -16,6 +16,7 @@ const PROVIDER_CONTRACT_PATH = 'backend/src/repositories/contracts/provider.rs'
 const SQLITE_MOD_PATH = 'backend/src/repositories/sqlite/mod.rs'
 const SQLITE_SESSION_PATH = 'backend/src/repositories/sqlite/session.rs'
 const CHANGED_PATH_DISCOVERY_FAILURE = 'GIT_CHANGED_PATH_DISCOVERY_FAILED:'
+export const CHANGED_PATH_BASE_OBJECT_ENV = 'TALOS_CHANGED_PATH_BASE_OBJECT'
 
 function failure(path, evidence) {
   return { rule: 'TALOS-OPS-018', path, evidence, occurrences: 1 }
@@ -307,10 +308,18 @@ function loadRepositoryFiles(root) {
   return files
 }
 
-export function discoverChangedPaths(root, execute = execFileSync) {
+export function discoverChangedPaths(root, execute = execFileSync, discovery = {}) {
   try {
     const options = { cwd: root, encoding: 'utf8' }
-    const committed = execute('git', ['diff', '--name-only', 'origin/prototype...HEAD'], options)
+    const configuredBase = discovery.baseObject ?? process.env[CHANGED_PATH_BASE_OBJECT_ENV]
+    const baseObject = typeof configuredBase === 'string' ? configuredBase.trim() : ''
+    if (baseObject && !/^[0-9a-f]{40}$/i.test(baseObject)) {
+      throw new Error(`${CHANGED_PATH_BASE_OBJECT_ENV} must be a full 40-character Git object id`)
+    }
+    const committedArgs = baseObject
+      ? ['diff', '--name-only', baseObject, 'HEAD']
+      : ['diff', '--name-only', 'origin/prototype...HEAD']
+    const committed = execute('git', committedArgs, options)
     const unstaged = execute('git', ['diff', '--name-only'], options)
     const staged = execute('git', ['diff', '--cached', '--name-only'], options)
     const untracked = execute('git', ['ls-files', '--others', '--exclude-standard'], options)

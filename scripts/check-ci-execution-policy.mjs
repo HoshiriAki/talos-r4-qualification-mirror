@@ -156,6 +156,7 @@ export function validateCiExecutionPolicy({
     'Current package qualification',
     'TALOS_OPS_BASELINE_PROJECTION_FILE=policy/qualification/talos-ops-baseline-projection.json',
     'TALOS_OPS_BASELINE_MODE=canonical-fingerprint-projection',
+    'TALOS_CHANGED_PATH_BASE_OBJECT=$SOURCE_TREE_SHA',
     'ci-package-qualification.mjs',
     'ci-run-package-qualification.mjs',
   ]) {

@@ -106,6 +106,16 @@ const cases = [
     }),
   },
   {
+    name: 'requires mirror changed-path base object',
+    mutate: value => ({
+      ...value,
+      exactHeadSource: value.exactHeadSource.replace(
+        '            echo "TALOS_CHANGED_PATH_BASE_OBJECT=$SOURCE_TREE_SHA" >> "$GITHUB_ENV"\n',
+        '',
+      ),
+    }),
+  },
+  {
     name: 'requires exact-head Rust provenance build step',
     mutate: value => ({
       ...value,
