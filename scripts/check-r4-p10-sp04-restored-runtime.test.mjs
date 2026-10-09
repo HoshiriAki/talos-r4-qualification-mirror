@@ -71,6 +71,13 @@ expectFailure('restored identity continuity proof disappears', snapshot => {
   )
 }, 'test "$RESTORED_IDENTITY_ID" = "$SOURCE_IDENTITY_ID"')
 
+expectFailure('restored machine credential authority uses a retired table', snapshot => {
+  snapshot.runner = snapshot.runner.replace(
+    'FROM api_clients WHERE tenant_id=',
+    'FROM removed_machine_clients WHERE tenant_id=',
+  )
+}, 'FROM api_clients WHERE tenant_id=')
+
 expectFailure('restored machine write disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace(
     'runtime_write_status="$(curl',
@@ -124,4 +131,4 @@ expectFailure('SP04 returns to permanent Exact-Head job', snapshot => {
   snapshot.workflow += '\n  p10_sp04_restored_runtime:\n    name: P10-SP04 restored exact-application runtime\n'
 }, 'must not hard-code P10-SP04 package job')
 
-console.log('R4-P10-SP04 restored runtime mutation tests passed: 18 cases.')
+console.log('R4-P10-SP04 restored runtime mutation tests passed: 19 cases.')
