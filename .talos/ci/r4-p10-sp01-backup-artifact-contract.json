@@ -1,0 +1,66 @@
+{
+  "schema": "talos.p10.backup-artifact-contract/v1",
+  "scope": "R4-P10-SP01",
+  "exitGate": "P10_BACKUP_ARTIFACT_CONTRACT_PASS",
+  "postgres": {
+    "major": 18,
+    "clientImage": "postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2",
+    "dumpFlags": [
+      "--format=custom",
+      "--no-owner",
+      "--no-acl"
+    ]
+  },
+  "integrity": {
+    "plaintextChecksum": "sha256",
+    "protectedChecksum": "sha256",
+    "immediateDecryptRoundTripRequired": true,
+    "pgRestoreListRequired": true
+  },
+  "encryption": {
+    "policyId": "gnupg-symmetric-aes256-s2k3-sha512",
+    "cipher": "AES256",
+    "s2kMode": 3,
+    "s2kDigest": "SHA512",
+    "ephemeralPrivateHomeRequired": true,
+    "plaintextRetained": false
+  },
+  "metadataRequired": [
+    "source_sha",
+    "source_tree",
+    "source.database",
+    "source.user",
+    "source.server_version_num",
+    "source.pg_is_in_recovery",
+    "migration.count",
+    "migration.latest_id",
+    "migration.repository_manifest_sha256",
+    "migration.repository_head",
+    "created_at",
+    "dump.plaintext_bytes",
+    "dump.plaintext_sha256",
+    "protected_artifact.bytes",
+    "protected_artifact.sha256",
+    "protected_artifact.encryption_policy",
+    "operator_id",
+    "run_id"
+  ],
+  "legacyToolsForbidden": [
+    "scripts/backup.sh",
+    "scripts/db-backup.js",
+    "scripts/dr-restore.sh"
+  ],
+  "negativeEvidenceRequired": [
+    "ciphertext_tamper_rejected",
+    "metadata_tamper_rejected",
+    "wrong_key_rejected",
+    "secret_leak_scan"
+  ],
+  "claimsExcluded": [
+    "RECOVERY_REHEARSAL_PASS",
+    "MIGRATION_BACKUP_RESTORE_ROLLBACK_PASS",
+    "RTO_VERIFIED",
+    "RPO_VERIFIED"
+  ],
+  "handoffEvidence": "policy/qualification/legacy-evidence/docs/proposals/talos-ops-business-closure/r4-p8f-performance-recovery-handoff.md"
+}
