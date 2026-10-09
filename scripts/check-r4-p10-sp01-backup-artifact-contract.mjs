@@ -225,6 +225,8 @@ export function validateP10Sp01Snapshot(snapshot) {
     'source-tree-sha.txt',
     'backend/src/db/migrations/postgres',
     'migration_manifest_sha256="$(',
+    'sha256sum "$file"',
+    "done | sha256sum | awk '{print $1}'",
     'migration-manifest.txt',
     'P10_SOURCE_SHA="$TALOS_QUALIFIED_SOURCE_SHA"',
     'P10_SOURCE_TREE="$TALOS_QUALIFIED_SOURCE_TREE_SHA"',
