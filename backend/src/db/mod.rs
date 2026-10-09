@@ -3,6 +3,8 @@ pub mod migrations;
 #[cfg(feature = "postgres")]
 pub mod migrations_pg;
 #[cfg(all(test, feature = "postgres"))]
+mod p10_restore_qualification;
+#[cfg(all(test, feature = "postgres"))]
 mod p8_pg18_qualification;
 pub mod pool;
 pub mod query;

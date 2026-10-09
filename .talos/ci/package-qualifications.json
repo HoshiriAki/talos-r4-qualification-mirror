@@ -18,6 +18,15 @@
       ],
       "qualification_script": "scripts/r4-p10-sp02-protected-backup-rehearsal.sh",
       "label": "p10-sp02-protected-backup-rehearsal"
+    },
+    {
+      "branch_prefix": "agent/r4-p10-sp03-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp03-isolated-restore.test.mjs",
+        "scripts/check-r4-p10-sp03-isolated-restore.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp03-isolated-restore.sh",
+      "label": "p10-sp03-isolated-restore"
     }
   ]
 }

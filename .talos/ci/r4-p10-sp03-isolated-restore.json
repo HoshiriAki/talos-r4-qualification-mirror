@@ -1,0 +1,39 @@
+{
+  "schema": "talos.p10.isolated-restore-contract/v1",
+  "scope": "R4-P10-SP03",
+  "exitGate": "P10_ISOLATED_RESTORE_PASS",
+  "dependsOn": [
+    "P10_BACKUP_ARTIFACT_CONTRACT_PASS",
+    "P10_PROTECTED_BACKUP_REHEARSAL_PASS"
+  ],
+  "sourceArtifact": {
+    "exactSourceSha": true,
+    "exactSourceTree": true,
+    "repositoryMigrationManifest": true,
+    "protectedVerificationBeforeRestore": true,
+    "priorRuntimeKeyReuseForbidden": true
+  },
+  "restoreAuthority": {
+    "postgresMajor": 18,
+    "freshDatabaseRequired": true,
+    "differentContainerIdentity": true,
+    "differentSystemIdentifier": true,
+    "plaintextOnlyInPrivateRuntime": true,
+    "sourceDatabaseUsedAsRestoreInput": false
+  },
+  "invariants": {
+    "preBackupMarkerPresent": true,
+    "postBackupMarkerAbsent": true,
+    "sourceAuthorityUnchanged": true,
+    "productionMigrationAuthorityRuns": 2,
+    "productionMigrationExecutionsExpected": 0
+  },
+  "claimsExcluded": [
+    "P10_RESTORED_RUNTIME_PASS",
+    "P10_ROLLBACK_FORWARD_FIX_PASS",
+    "RECOVERY_REHEARSAL_PASS",
+    "MIGRATION_BACKUP_RESTORE_ROLLBACK_PASS",
+    "RTO_VERIFIED",
+    "RPO_VERIFIED"
+  ]
+}
