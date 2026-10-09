@@ -54,8 +54,6 @@ mod integration_module_postgres_tests;
 #[cfg(all(test, feature = "postgres"))]
 mod operation_runtime_postgres_tests;
 #[cfg(all(test, feature = "postgres"))]
-mod p10_recovery_qualification;
-#[cfg(all(test, feature = "postgres"))]
 mod scheduler_persistence_postgres_tests;
 #[cfg(all(test, feature = "postgres"))]
 mod webhook_event_pg_tests;

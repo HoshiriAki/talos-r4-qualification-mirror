@@ -36,6 +36,15 @@
       ],
       "qualification_script": "scripts/r4-p10-sp04-restored-runtime.sh",
       "label": "p10-sp04-restored-runtime"
+    },
+    {
+      "branch_prefix": "agent/r4-p10-sp05-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp05-rollback-forward-fix.test.mjs",
+        "scripts/check-r4-p10-sp05-rollback-forward-fix.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp05-rollback-forward-fix.sh",
+      "label": "p10-sp05-rollback-forward-fix"
     }
   ]
 }
