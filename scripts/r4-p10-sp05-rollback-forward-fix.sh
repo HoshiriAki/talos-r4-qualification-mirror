@@ -334,6 +334,7 @@ test "$DRAIN_OUTBOX" = 0
 
 ATTEMPT_ID="p10-sp05-attempt-$SAFE_ID"
 EVENT_ID="p10-sp05-claimed-$SAFE_ID"
+echo "P10_SP05_STAGE crash_cut_begin"
 docker exec "$DB_CONTAINER" psql -U talos -d talos   -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID"   -v attempt_id="$ATTEMPT_ID" -v event_id="$EVENT_ID" <<'SQL'
 \set ON_ERROR_STOP on
 BEGIN;
@@ -352,14 +353,26 @@ VALUES
   (:'event_id',:'tenant_id',:'operation_id',:'attempt_id','claimed','p10_sp05_controlled_crash_cut',CURRENT_TIMESTAMP::text);
 COMMIT;
 SQL
-test "$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")" = 'dispatching|1'
+CUT_STATE="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")"
+CUT_ATTEMPTS="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM external_operation_attempts WHERE tenant_id='$TENANT_A_ID' AND operation_id='$OPERATION_ID' AND attempt_number=1 AND state='dispatching';")"
+CUT_EVENTS="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM external_operation_runtime_events WHERE tenant_id='$TENANT_A_ID' AND operation_id='$OPERATION_ID' AND event_type='claimed' AND classification='p10_sp05_controlled_crash_cut';")"
+printf 'P10_SP05_CRASH_CUT state=%s attempts=%s claimed_events=%s\n' "$CUT_STATE" "$CUT_ATTEMPTS" "$CUT_EVENTS"
+test "$CUT_STATE" = 'dispatching|1'
+test "$CUT_ATTEMPTS" = 1
+test "$CUT_EVENTS" = 1
 
+echo "P10_SP05_STAGE binding_freeze_begin"
 disable_status="$(curl --silent --show-error --insecure --noproxy '*'   --connect-to "$TENANT_A_CONNECT" --cookie "$TENANT_A_COOKIE"   --output "$RUNTIME_DIR/binding-disabled.json" --write-out '%{http_code}'   -H "Origin: $TENANT_A_ORIGIN" -H 'Content-Type: application/json'   --data "$(binding_body false)" "$TENANT_A_ORIGIN/api/integrations/bindings")"
+BINDING_ENABLED="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT enabled FROM provider_bindings WHERE tenant_id='$TENANT_A_ID' AND id='$BINDING_ID';")"
+BINDING_DISABLE_HISTORY="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM provider_binding_history WHERE tenant_id='$TENANT_A_ID' AND binding_id='$BINDING_ID' AND action='disabled';")"
+POST_FREEZE_OPERATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")"
+printf 'P10_SP05_BINDING_FREEZE http=%s enabled=%s history=%s operation=%s\n' "$disable_status" "$BINDING_ENABLED" "$BINDING_DISABLE_HISTORY" "$POST_FREEZE_OPERATION"
 test "$disable_status" = 200
-test "$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT enabled FROM provider_bindings WHERE tenant_id='$TENANT_A_ID' AND id='$BINDING_ID';")" = f
-test "$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM provider_binding_history WHERE tenant_id='$TENANT_A_ID' AND binding_id='$BINDING_ID' AND action='disabled';")" = 1
-test "$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")" = 'dispatching|1'
+test "$BINDING_ENABLED" = f
+test "$BINDING_DISABLE_HISTORY" = 1
+test "$POST_FREEZE_OPERATION" = 'dispatching|1'
 
+echo "P10_SP05_STAGE app_stop_begin"
 compose stop -t 20 nginx app
 docker logs "$CURRENT_APP_CONTAINER" > "$EVIDENCE_DIR/current-before-rollback.log" 2>&1
 grep -F 'graceful shutdown complete' "$EVIDENCE_DIR/current-before-rollback.log" >/dev/null
