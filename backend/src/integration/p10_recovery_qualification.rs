@@ -11,8 +11,7 @@ use super::types::ExternalOperationId;
 async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::Result<()> {
     let database_url = std::env::var("TALOS_P10_RECOVERY_DATABASE_URL")?;
     let tenant_id = std::env::var("TALOS_P10_RECOVERY_TENANT_ID")?;
-    let operation_id =
-        ExternalOperationId::new(std::env::var("TALOS_P10_RECOVERY_OPERATION_ID")?)?;
+    let operation_id = ExternalOperationId::new(std::env::var("TALOS_P10_RECOVERY_OPERATION_ID")?)?;
 
     let pool = PgPoolOptions::new()
         .max_connections(4)
@@ -30,8 +29,14 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .fetch_one(&pool)
     .await?;
 
-    anyhow::ensure!(before.0 == "unknown_outcome", "fixture must be unknown_outcome");
-    anyhow::ensure!(before.1 == 1, "fixture must have exactly one dispatched attempt");
+    anyhow::ensure!(
+        before.0 == "unknown_outcome",
+        "fixture must be unknown_outcome"
+    );
+    anyhow::ensure!(
+        before.1 == 1,
+        "fixture must have exactly one dispatched attempt"
+    );
     anyhow::ensure!(
         before.2.as_deref() == Some("worker_restarted_after_dispatch"),
         "fixture must carry restart-after-dispatch classification"
@@ -60,13 +65,12 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
         "p10-sp05-provider-query-confirmed-effect",
     )?;
 
-    let reconciling: String = sqlx::query_scalar(
-        "SELECT state FROM external_operations WHERE tenant_id=$1 AND id=$2",
-    )
-    .bind(&tenant_id)
-    .bind(operation_id.as_str())
-    .fetch_one(&pool)
-    .await?;
+    let reconciling: String =
+        sqlx::query_scalar("SELECT state FROM external_operations WHERE tenant_id=$1 AND id=$2")
+            .bind(&tenant_id)
+            .bind(operation_id.as_str())
+            .fetch_one(&pool)
+            .await?;
     anyhow::ensure!(reconciling == "reconciling");
 
     let pending: (String, String) = sqlx::query_as(
@@ -100,7 +104,10 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(resolved.0 == "resolved");
-    anyhow::ensure!(resolved.1 == 1, "reconciliation must not create a retry attempt");
+    anyhow::ensure!(
+        resolved.1 == 1,
+        "reconciliation must not create a retry attempt"
+    );
 
     let reconciliation: (String, Option<String>, Option<String>) = sqlx::query_as(
         "SELECT outcome,resolved_by,resolved_at
@@ -114,9 +121,7 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(reconciliation.0 == "effect_confirmed");
-    anyhow::ensure!(
-        reconciliation.1.as_deref() == Some("p10-sp05-recovery-operator")
-    );
+    anyhow::ensure!(reconciliation.1.as_deref() == Some("p10-sp05-recovery-operator"));
     anyhow::ensure!(reconciliation.2.is_some());
 
     println!(
