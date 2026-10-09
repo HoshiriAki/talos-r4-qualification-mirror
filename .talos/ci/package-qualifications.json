@@ -9,6 +9,15 @@
       ],
       "qualification_script": "scripts/r4-p10-sp01-backup-artifact-contract.sh",
       "label": "p10-sp01-backup-artifact"
+    },
+    {
+      "branch_prefix": "agent/r4-p10-sp02-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp02-protected-backup-rehearsal.test.mjs",
+        "scripts/check-r4-p10-sp02-protected-backup-rehearsal.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp02-protected-backup-rehearsal.sh",
+      "label": "p10-sp02-protected-backup-rehearsal"
     }
   ]
 }

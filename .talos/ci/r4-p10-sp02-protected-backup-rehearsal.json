@@ -1,0 +1,79 @@
+{
+  "schema": "talos.p10.protected-backup-rehearsal-contract/v1",
+  "scope": "R4-P10-SP02",
+  "exitGate": "P10_PROTECTED_BACKUP_REHEARSAL_PASS",
+  "dependsOn": [
+    "P10_BACKUP_ARTIFACT_CONTRACT_PASS"
+  ],
+  "sourceProfile": {
+    "postgresMajor": 18,
+    "productionLike": true,
+    "composeFiles": [
+      "deploy/compose.production.yml",
+      "deploy/compose.p9-sp03.yml"
+    ],
+    "canonicalSurfaces": [
+      "/auth/platform/login",
+      "/api/tenants",
+      "/api/machine/v1/tenants/",
+      "/api/integrations/manifests",
+      "/api/integrations/instances",
+      "/api/integrations/bindings",
+      "/api/integrations/operations"
+    ]
+  },
+  "authoritativeIdentity": {
+    "sourceShaEnv": "TALOS_QUALIFIED_SOURCE_SHA",
+    "sourceTreeEnv": "TALOS_QUALIFIED_SOURCE_TREE_SHA",
+    "migrationManifest": "per-file-sha256",
+    "migrationHeadRequired": true,
+    "transportShaIsNotSourceAuthority": true
+  },
+  "cutSafety": {
+    "stopBeforeCut": [
+      "nginx",
+      "app"
+    ],
+    "requiredZeroStates": [
+      "external_operations.dispatching",
+      "workflow_steps.running",
+      "domain_outbox.processing"
+    ],
+    "preBackupMarker": "pre_backup",
+    "postBackupMarker": "post_backup",
+    "postMarkerAfterProtectedVerification": true,
+    "ciphertextStableAfterPostMarker": true
+  },
+  "protectedArtifact": {
+    "backupTool": "scripts/r4-p10-pg-backup.sh",
+    "verifyTool": "scripts/r4-p10-verify-backup.sh",
+    "plaintextRetained": false,
+    "runtimeSecretsRetained": false
+  },
+  "evidenceRequired": [
+    "source_sha",
+    "source_tree",
+    "transport_sha",
+    "repository_migration_head",
+    "repository_migration_manifest_sha256",
+    "postgres_system_identifier",
+    "postgres_server_version_num",
+    "tenant_isolation",
+    "machine_command_audit",
+    "workflow_state",
+    "integration_state",
+    "quiescence",
+    "pre_backup_marker",
+    "post_backup_marker_after_cut",
+    "protected_artifact_verified",
+    "ciphertext_stable",
+    "secret_leak_scan"
+  ],
+  "claimsExcluded": [
+    "P10_ISOLATED_RESTORE_PASS",
+    "RECOVERY_REHEARSAL_PASS",
+    "MIGRATION_BACKUP_RESTORE_ROLLBACK_PASS",
+    "RTO_VERIFIED",
+    "RPO_VERIFIED"
+  ]
+}
