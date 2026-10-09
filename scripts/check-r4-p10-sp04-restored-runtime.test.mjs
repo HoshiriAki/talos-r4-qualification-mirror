@@ -72,8 +72,11 @@ expectFailure('restored identity continuity proof disappears', snapshot => {
 }, 'test "$RESTORED_IDENTITY_ID" = "$SOURCE_IDENTITY_ID"')
 
 expectFailure('restored machine write disappears', snapshot => {
-  snapshot.runner = snapshot.runner.replace('runtime_write_status=', 'removed_runtime_write_status=')
-}, 'runtime_write_status=')
+  snapshot.runner = snapshot.runner.replace(
+    'runtime_write_status="$(curl',
+    'write_disabled="$(curl',
+  )
+}, 'runtime_write_status="$(curl')
 
 expectFailure('source correlation absence proof disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace(

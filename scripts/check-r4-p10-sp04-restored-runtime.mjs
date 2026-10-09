@@ -205,6 +205,20 @@ export function validateP10Sp04Snapshot(snapshot) {
     'restored-existing-b.json',
     'Authorization: Bearer $MACHINE_SECRET',
     '/api/machine/v1/tenants/',
+    'runtime_write_status="$(curl',
+    'test "$runtime_write_status" = "200"',
+    'RUNTIME_CORRELATION_ID=',
+    'test -n "$RUNTIME_CORRELATION_ID"',
+    'RESTORED_NEW_DEVICE_A_COUNT=',
+    'RESTORED_NEW_DEVICE_B_COUNT=',
+    'RESTORED_MACHINE_AUDIT_NEW=',
+    'RESTORED_COMMAND_AUDIT_NEW=',
+    'RESTORED_CROSS_AUDIT_NEW=',
+    'test "$RESTORED_NEW_DEVICE_A_COUNT" = "1"',
+    'test "$RESTORED_NEW_DEVICE_B_COUNT" = "0"',
+    'test "$RESTORED_MACHINE_AUDIT_NEW" = "1"',
+    'test "$RESTORED_COMMAND_AUDIT_NEW" = "1"',
+    'test "$RESTORED_CROSS_AUDIT_NEW" = "0"',
     'RUNTIME_CORRELATION_ID=',
     'RESTORED_MACHINE_AUDIT_NEW=',
     'RESTORED_COMMAND_AUDIT_NEW=',
@@ -240,7 +254,7 @@ export function validateP10Sp04Snapshot(snapshot) {
   const runtimeStart = snapshot.runner.indexOf('"${compose[@]}" up -d --no-deps --force-recreate app nginx')
   const runtimeReady = snapshot.runner.indexOf('ready-restored.json')
   const platformLogin = snapshot.runner.indexOf('restored_platform_login_status=')
-  const runtimeWrite = snapshot.runner.indexOf('runtime_write_status=')
+  const runtimeWrite = snapshot.runner.indexOf('runtime_write_status="$(curl')
   const sourceCorrelation = snapshot.runner.indexOf('SOURCE_RUNTIME_CORRELATION_COUNT=')
   const recoveryState = snapshot.runner.indexOf('RESTORED_OPERATION_AFTER_RUNTIME=')
   const sqliteAbsence = snapshot.runner.indexOf('RESTORED_SQLITE_FILES=')
