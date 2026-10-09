@@ -82,6 +82,10 @@ expectFailure('drain proof disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace('test "$DRAIN_DISPATCHING" = 0', 'echo no-drain-check')
 }, 'test "$DRAIN_DISPATCHING" = 0')
 
+expectFailure('bounded drain wait disappears', snapshot => {
+  snapshot.runner = snapshot.runner.replace('P10_SP05_DRAIN dispatching=%s workflow_running=%s outbox_processing=%s', 'drain-diagnostic-removed')
+}, 'P10_SP05_DRAIN dispatching=%s workflow_running=%s outbox_processing=%s')
+
 expectFailure('UnknownOutcome classification proof disappears', snapshot => {
   snapshot.runner = snapshot.runner.replaceAll(
     'unknown_outcome|1|worker_restarted_after_dispatch',
@@ -126,4 +130,4 @@ expectFailure('SP05 returns to permanent Exact-Head job', snapshot => {
   snapshot.workflow += '\n  p10_sp05_rollback_forward_fix:\n    run: bash scripts/r4-p10-sp05-rollback-forward-fix.sh\n'
 }, 'must not hard-code P10-SP05 package job')
 
-console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 16 cases.')
+console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 17 cases.')

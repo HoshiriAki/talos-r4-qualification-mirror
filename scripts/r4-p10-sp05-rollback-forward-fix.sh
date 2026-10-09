@@ -318,9 +318,16 @@ grep -F ROLLBACK_SCHEMA_COMPATIBLE "$EVIDENCE_DIR/compatible-schema-gate.log" >/
 
 docker build -t "$P9_IMAGE" "$P9_BUILD_CONTEXT" > "$EVIDENCE_DIR/p9-image-build.log"
 
-DRAIN_DISPATCHING="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM external_operations WHERE state='dispatching';")"
-DRAIN_WORKFLOW="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM workflow_steps WHERE state='running';")"
-DRAIN_OUTBOX="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM domain_outbox WHERE state='processing';")"
+for _ in $(seq 1 30); do
+  DRAIN_DISPATCHING="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM external_operations WHERE state='dispatching';")"
+  DRAIN_WORKFLOW="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM workflow_steps WHERE state='running';")"
+  DRAIN_OUTBOX="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM domain_outbox WHERE state='processing';")"
+  if [[ "$DRAIN_DISPATCHING" = 0 && "$DRAIN_WORKFLOW" = 0 && "$DRAIN_OUTBOX" = 0 ]]; then
+    break
+  fi
+  sleep 1
+done
+printf 'P10_SP05_DRAIN dispatching=%s workflow_running=%s outbox_processing=%s\n' "$DRAIN_DISPATCHING" "$DRAIN_WORKFLOW" "$DRAIN_OUTBOX"
 test "$DRAIN_DISPATCHING" = 0
 test "$DRAIN_WORKFLOW" = 0
 test "$DRAIN_OUTBOX" = 0
