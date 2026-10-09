@@ -27,6 +27,15 @@
       ],
       "qualification_script": "scripts/r4-p10-sp03-isolated-restore.sh",
       "label": "p10-sp03-isolated-restore"
+    },
+    {
+      "branch_prefix": "agent/r4-p10-sp04-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp04-restored-runtime.test.mjs",
+        "scripts/check-r4-p10-sp04-restored-runtime.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp04-restored-runtime.sh",
+      "label": "p10-sp04-restored-runtime"
     }
   ]
 }

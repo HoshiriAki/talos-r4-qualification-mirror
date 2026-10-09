@@ -1,0 +1,56 @@
+{
+  "schema": "talos.p10.restored-runtime-contract/v1",
+  "scope": "R4-P10-SP04",
+  "exitGate": "P10_RESTORED_RUNTIME_PASS",
+  "dependsOn": [
+    "P10_BACKUP_ARTIFACT_CONTRACT_PASS",
+    "P10_PROTECTED_BACKUP_REHEARSAL_PASS",
+    "P10_ISOLATED_RESTORE_PASS"
+  ],
+  "sourceArtifact": {
+    "exactSourceSha": true,
+    "exactSourceTree": true,
+    "repositoryMigrationManifest": true,
+    "protectedVerificationBeforeRestore": true
+  },
+  "restoredRuntime": {
+    "postgresMajor": 18,
+    "sourceDatabaseDisconnectedBeforeRuntime": true,
+    "restoredDatabaseBoundToProductionAlias": true,
+    "restoredAppFreshContainer": true,
+    "readinessRequiresPostgres": true,
+    "sqliteProductionStateForbidden": true
+  },
+  "identityContinuity": {
+    "platformIdentityStable": true,
+    "tenantAuthenticationRequired": true,
+    "preBackupMachineCredentialUsable": true
+  },
+  "businessEvidence": {
+    "restoredExistingReadRequired": true,
+    "restoredNewTenantWriteRequired": true,
+    "tenantIsolationRequired": true,
+    "canonicalAuditRequired": true,
+    "sourceCorrelationAbsent": true,
+    "sourceNewWriteAbsent": true
+  },
+  "recoveryState": {
+    "integrationOperationGoverned": true,
+    "integrationCircuitGoverned": true,
+    "preBackupMarkerPresent": true,
+    "postBackupMarkerAbsent": true,
+    "sourceAuthorityUnchanged": true
+  },
+  "evidence": {
+    "finalSecretScanRequired": true,
+    "finalLogsBeforeSecretScan": true,
+    "runtimeSecretsRetained": false
+  },
+  "claimsExcluded": [
+    "P10_ROLLBACK_FORWARD_FIX_PASS",
+    "RECOVERY_REHEARSAL_PASS",
+    "MIGRATION_BACKUP_RESTORE_ROLLBACK_PASS",
+    "RTO_VERIFIED",
+    "RPO_VERIFIED"
+  ]
+}
