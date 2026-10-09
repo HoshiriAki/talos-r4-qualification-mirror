@@ -83,7 +83,7 @@ expectFailure('drain proof disappears', snapshot => {
 }, 'test "$DRAIN_DISPATCHING" = 0')
 
 expectFailure('UnknownOutcome classification proof disappears', snapshot => {
-  snapshot.runner = snapshot.runner.replace(
+  snapshot.runner = snapshot.runner.replaceAll(
     'unknown_outcome|1|worker_restarted_after_dispatch',
     'ready|2|blind-retry',
   )
