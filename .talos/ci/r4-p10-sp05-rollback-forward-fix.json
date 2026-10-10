@@ -44,7 +44,8 @@
     "blindRetryForbidden": true,
     "reconciliationRequired": true,
     "attemptCountStable": true,
-    "compensation": "not_applicable_nonfinancial_fixture"
+    "compensation": "not_applicable_nonfinancial_fixture",
+    "preCutSchedulerDeferral": true
   },
   "forwardFix": {
     "currentExactApplicationRestart": true,
