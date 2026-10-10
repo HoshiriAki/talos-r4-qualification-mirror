@@ -266,14 +266,6 @@ test -n "$NGINX_CONTAINER"
 DB_NETWORK="$(docker inspect -f '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$DB_CONTAINER" | head -n1)"
 test -n "$DB_NETWORK"
 
-docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v binding_id="$BINDING_ID" <<'SQL'
-\set ON_ERROR_STOP on
-INSERT INTO integration_circuit_state(tenant_id,binding_id,state,failure_count,opened_until,updated_at)
-VALUES(:'tenant_id',:'binding_id','open',1,'9999-12-31T23:59:59Z',CURRENT_TIMESTAMP::text)
-ON CONFLICT (tenant_id,binding_id) DO UPDATE
-SET state='open',failure_count=1,opened_until='9999-12-31T23:59:59Z',updated_at=CURRENT_TIMESTAMP::text;
-SQL
-
 OP_BODY="$(printf '{"capability":"qualification.rollback","operationType":"qualification","idempotencyKey":"p10-sp05-%s","requestHash":"p10-sp05-request-%s"}' "$SAFE_ID" "$SAFE_ID")"
 op_status="$(curl --silent --show-error --insecure --noproxy '*'   --connect-to "$TENANT_A_CONNECT" --cookie "$TENANT_A_COOKIE"   --output "$RUNTIME_DIR/operation.json" --write-out '%{http_code}'   -H "Origin: $TENANT_A_ORIGIN" -H 'Content-Type: application/json'   --data "$OP_BODY" "$TENANT_A_ORIGIN/api/integrations/operations")"
 test "$op_status" = 200
@@ -285,26 +277,24 @@ print(d["externalOperationId"])
 PY
 )"
 
-# Re-project the already-open circuit after operation admission. The PostgreSQL
-# circuit trigger only defers ready/retryable operations that exist at the
-# moment the circuit row is inserted/updated.
-docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v binding_id="$BINDING_ID" <<'SQL'
+# Freeze this synthetic operation out of the production scheduler while the
+# rollback image is built. The production claim authority already treats a
+# future next_retry_at as not due; the later controlled crash cut clears it.
+docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID" <<'SQL'
 \set ON_ERROR_STOP on
-INSERT INTO integration_circuit_state
-    (tenant_id,binding_id,state,failure_count,opened_until,updated_at)
-VALUES
-    (:'tenant_id',:'binding_id','open',1,'9999-12-31T23:59:59Z',CURRENT_TIMESTAMP::text)
-ON CONFLICT (tenant_id,binding_id) DO UPDATE
-SET state='open',
-    failure_count=GREATEST(integration_circuit_state.failure_count,1),
-    opened_until='9999-12-31T23:59:59Z',
-    updated_at=CURRENT_TIMESTAMP::text;
+UPDATE external_operations
+SET next_retry_at='9999-12-31T23:59:59Z',
+    updated_at=CURRENT_TIMESTAMP::text
+WHERE tenant_id=:'tenant_id'
+  AND id=:'operation_id'
+  AND state='ready'
+  AND attempt_count=0;
 SQL
 DEFERRED_OPERATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count || '|' || COALESCE(next_retry_at,'') FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")"
-CIRCUIT_STATE="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || COALESCE(opened_until,'') FROM integration_circuit_state WHERE tenant_id='$TENANT_A_ID' AND binding_id='$BINDING_ID';")"
-printf 'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s\n' "$DEFERRED_OPERATION" "$CIRCUIT_STATE"
+PRE_CUT_BINDING_ENABLED="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT enabled FROM provider_bindings WHERE tenant_id='$TENANT_A_ID' AND id='$BINDING_ID';")"
+printf 'P10_SP05_DEFERRED_OPERATION operation=%s binding_enabled=%s\n' "$DEFERRED_OPERATION" "$PRE_CUT_BINDING_ENABLED"
 test "$DEFERRED_OPERATION" = 'ready|0|9999-12-31T23:59:59Z'
-test "$CIRCUIT_STATE" = 'open|9999-12-31T23:59:59Z'
+test "$PRE_CUT_BINDING_ENABLED" = t
 
 LATEST_MIGRATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1;")"
 MIGRATION_COUNT="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM schema_migrations;")"
