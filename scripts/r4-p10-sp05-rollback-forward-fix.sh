@@ -285,6 +285,24 @@ print(d["externalOperationId"])
 PY
 )"
 
+# Re-project the already-open circuit after operation admission. The PostgreSQL
+# circuit trigger only defers ready/retryable operations that exist at the
+# moment the circuit row is inserted/updated.
+docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v binding_id="$BINDING_ID" <<'SQL'
+\set ON_ERROR_STOP on
+UPDATE integration_circuit_state
+SET state='open',
+    failure_count=GREATEST(failure_count,1),
+    opened_until='9999-12-31T23:59:59Z',
+    updated_at=CURRENT_TIMESTAMP::text
+WHERE tenant_id=:'tenant_id' AND binding_id=:'binding_id';
+SQL
+DEFERRED_OPERATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count || '|' || COALESCE(next_retry_at,'') FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")"
+CIRCUIT_STATE="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || COALESCE(opened_until,'') FROM integration_circuit_state WHERE tenant_id='$TENANT_A_ID' AND binding_id='$BINDING_ID';")"
+printf 'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s\n' "$DEFERRED_OPERATION" "$CIRCUIT_STATE"
+test "$DEFERRED_OPERATION" = 'ready|0|9999-12-31T23:59:59Z'
+test "$CIRCUIT_STATE" = 'open|9999-12-31T23:59:59Z'
+
 LATEST_MIGRATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1;")"
 MIGRATION_COUNT="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT COUNT(*) FROM schema_migrations;")"
 test "$LATEST_MIGRATION" = "$source_migration_registry_head"
