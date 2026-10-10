@@ -53,7 +53,7 @@ expectFailure('restored machine client check returns to retired table', s => {
 
 expectFailure('milestone loses p10 option', s => {
   s.milestone = s.milestone.replace('          - p10', '')
-}, '- p10')
+}, 'options:')
 
 expectFailure('milestone drops P9 same-SHA dependency', s => {
   s.milestone = s.milestone.replace('      - p9_evidence_gate', '      - pin')

@@ -185,7 +185,7 @@ export function validateP10Sp06Snapshot(snapshot) {
   ])
 
   requireTokens(errors, snapshot.milestone, 'P10 same-SHA milestone', [
-    '- p10',
+    'options:\n          - p9\n          - p10',
     'p10_full_recovery:',
     "if: inputs.qualification_set == 'p10'",
     'TALOS_QUALIFIED_SOURCE_SHA=$actual',
