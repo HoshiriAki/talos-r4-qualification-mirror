@@ -290,12 +290,15 @@ PY
 # moment the circuit row is inserted/updated.
 docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v binding_id="$BINDING_ID" <<'SQL'
 \set ON_ERROR_STOP on
-UPDATE integration_circuit_state
+INSERT INTO integration_circuit_state
+    (tenant_id,binding_id,state,failure_count,opened_until,updated_at)
+VALUES
+    (:'tenant_id',:'binding_id','open',1,'9999-12-31T23:59:59Z',CURRENT_TIMESTAMP::text)
+ON CONFLICT (tenant_id,binding_id) DO UPDATE
 SET state='open',
-    failure_count=GREATEST(failure_count,1),
+    failure_count=GREATEST(integration_circuit_state.failure_count,1),
     opened_until='9999-12-31T23:59:59Z',
-    updated_at=CURRENT_TIMESTAMP::text
-WHERE tenant_id=:'tenant_id' AND binding_id=:'binding_id';
+    updated_at=CURRENT_TIMESTAMP::text;
 SQL
 DEFERRED_OPERATION="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || attempt_count || '|' || COALESCE(next_retry_at,'') FROM external_operations WHERE tenant_id='$TENANT_A_ID' AND id='$OPERATION_ID';")"
 CIRCUIT_STATE="$(docker exec "$DB_CONTAINER" psql -U talos -d talos -Atc "SELECT state || '|' || COALESCE(opened_until,'') FROM integration_circuit_state WHERE tenant_id='$TENANT_A_ID' AND binding_id='$BINDING_ID';")"
