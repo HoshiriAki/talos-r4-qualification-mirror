@@ -47,6 +47,10 @@ expectFailure('reconciliation actor disappears', s => {
   s.runner = s.runner.replace('TALOS_P10_RECOVERY_ACTOR_REF="p10-sp06-recovery-operator"', 'TALOS_P10_RECOVERY_ACTOR_REF=""')
 }, 'p10-sp06-recovery-operator')
 
+expectFailure('restored machine client check returns to retired table', s => {
+  s.runner = s.runner.replace('FROM api_clients WHERE tenant_id=', 'FROM machine_clients WHERE tenant_id=')
+}, 'FROM api_clients WHERE tenant_id=')
+
 expectFailure('milestone loses p10 option', s => {
   s.milestone = s.milestone.replace('          - p10', '')
 }, '- p10')
@@ -63,4 +67,4 @@ expectFailure('SP06 registration disappears', s => {
   s.registry = s.registry.replace('"branch_prefix": "agent/r4-p10-sp06-"', '"branch_prefix": "agent/r4-p10-sp99-"')
 }, '"branch_prefix": "agent/r4-p10-sp06-"')
 
-console.log('R4-P10-SP06 full recovery closure mutation tests passed: 12 cases.')
+console.log('R4-P10-SP06 full recovery closure mutation tests passed: 13 cases.')

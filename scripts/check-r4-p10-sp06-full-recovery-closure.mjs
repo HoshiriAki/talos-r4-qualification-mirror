@@ -135,6 +135,7 @@ export function validateP10Sp06Snapshot(snapshot) {
     'TALOS_P10_RECOVERY_ACTOR_REF="p10-sp06-recovery-operator"',
     'P10_EFFECT_RECONCILIATION',
     'effect_confirmed|p10-sp06-recovery-operator',
+    'FROM api_clients WHERE tenant_id=',
     'FULL_REHEARSAL_MS=',
     'rto_rpo_scope=measured_rehearsal_not_production_slo',
     'scan_retained_evidence()',
