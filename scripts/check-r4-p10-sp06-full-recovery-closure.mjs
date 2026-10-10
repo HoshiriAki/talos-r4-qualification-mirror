@@ -120,6 +120,8 @@ export function validateP10Sp06Snapshot(snapshot) {
     'P10_EXPECTED_SOURCE_TREE="$TALOS_QUALIFIED_SOURCE_TREE_SHA"',
     'P10_EXPECTED_MIGRATION_MANIFEST_SHA256="$source_migration_manifest_sha256"',
     'P10_EXPECTED_MIGRATION_HEAD="$source_migration_head"',
+    'TALOS_P10_EXPECTED_MIGRATION_ID="$source_migration_registry_head"',
+    'unset TALOS_P10_RESTORE_DATABASE_URL TALOS_P10_EXPECTED_MIGRATION_ID',
     'RECOVERY_START_NS=',
     'RUNTIME_RECOVERY_MS=',
     'CONTROLLED_DATA_LOSS_WINDOW_MS=',

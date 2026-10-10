@@ -847,6 +847,7 @@ test "$RESTORE_PRE_MARKER_COUNT" = "1"
 test "$RESTORE_POST_MARKER_COUNT" = "0"
 
 export TALOS_P10_RESTORE_DATABASE_URL="postgresql://talos:${RESTORE_PASSWORD}@127.0.0.1:${RESTORE_HOST_PORT}/talos"
+export TALOS_P10_EXPECTED_MIGRATION_ID="$source_migration_registry_head"
 cargo test \
   --manifest-path backend/Cargo.toml \
   --features postgres \
@@ -855,7 +856,7 @@ cargo test \
   --locked \
   -- --ignored --nocapture > "$EVIDENCE_DIR/migration-idempotency.log" 2>&1
 grep -F 'P10_RESTORE_MIGRATION_IDEMPOTENT' "$EVIDENCE_DIR/migration-idempotency.log" >/dev/null
-unset TALOS_P10_RESTORE_DATABASE_URL
+unset TALOS_P10_RESTORE_DATABASE_URL TALOS_P10_EXPECTED_MIGRATION_ID
 
 RESTORE_MIGRATION_COUNT_AFTER="$(restore_sql "SELECT COUNT(*) FROM schema_migrations;")"
 RESTORE_LATEST_MIGRATION_AFTER="$(restore_sql "SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1;")"

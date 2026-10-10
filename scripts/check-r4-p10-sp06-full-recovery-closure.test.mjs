@@ -30,6 +30,13 @@ expectFailure('restore source-tree binding disappears', s => {
   s.runner = s.runner.replace('P10_EXPECTED_SOURCE_TREE="$TALOS_QUALIFIED_SOURCE_TREE_SHA"', 'P10_EXPECTED_SOURCE_TREE=transport')
 }, 'P10_EXPECTED_SOURCE_TREE')
 
+expectFailure('restored migration id expectation disappears', s => {
+  s.runner = s.runner.replace(
+    'TALOS_P10_EXPECTED_MIGRATION_ID="$source_migration_registry_head"',
+    'TALOS_P10_EXPECTED_MIGRATION_ID=""',
+  )
+}, 'TALOS_P10_EXPECTED_MIGRATION_ID="$source_migration_registry_head"')
+
 expectFailure('recovery timer moves before backup', s => {
   s.runner = s.runner.replace('RECOVERY_START_NS="$(date +%s%N)"', 'echo recovery-timer-removed')
   s.runner = s.runner.replace('bash scripts/r4-p10-pg-backup.sh', 'RECOVERY_START_NS="$(date +%s%N)"\nbash scripts/r4-p10-pg-backup.sh')
@@ -67,4 +74,4 @@ expectFailure('SP06 registration disappears', s => {
   s.registry = s.registry.replace('"branch_prefix": "agent/r4-p10-sp06-"', '"branch_prefix": "agent/r4-p10-sp99-"')
 }, '"branch_prefix": "agent/r4-p10-sp06-"')
 
-console.log('R4-P10-SP06 full recovery closure mutation tests passed: 13 cases.')
+console.log('R4-P10-SP06 full recovery closure mutation tests passed: 14 cases.')
