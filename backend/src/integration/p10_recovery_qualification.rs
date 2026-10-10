@@ -63,11 +63,7 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .await?;
     anyhow::ensure!(attempt_before == 1, "blind retry created a second attempt");
 
-    persistence.begin_reconciliation(
-        &tenant_id,
-        &operation_id,
-        &evidence_ref,
-    )?;
+    persistence.begin_reconciliation(&tenant_id, &operation_id, &evidence_ref)?;
 
     let reconciling: String =
         sqlx::query_scalar("SELECT state FROM external_operations WHERE tenant_id=$1 AND id=$2")
@@ -91,12 +87,7 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     anyhow::ensure!(pending.0 == "pending");
     anyhow::ensure!(pending.1 == evidence_ref);
 
-    persistence.resolve_reconciliation(
-        &tenant_id,
-        &operation_id,
-        true,
-        &actor_ref,
-    )?;
+    persistence.resolve_reconciliation(&tenant_id, &operation_id, true, &actor_ref)?;
 
     let resolved: (String, i64) = sqlx::query_as(
         "SELECT state,attempt_count
