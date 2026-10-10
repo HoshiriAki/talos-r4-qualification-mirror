@@ -78,12 +78,12 @@ expectFailure('rollback image no longer uses projected context', snapshot => {
   )
 }, 'docker build -t "$P9_IMAGE" "$P9_BUILD_CONTEXT"')
 
-expectFailure('post-admission circuit deferral disappears', snapshot => {
+expectFailure('pre-cut scheduler deferral disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace(
-    'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s',
-    'post-admission-deferral-removed',
+    'P10_SP05_DEFERRED_OPERATION operation=%s binding_enabled=%s',
+    'pre-cut-deferral-removed',
   )
-}, 'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s')
+}, 'P10_SP05_DEFERRED_OPERATION operation=%s binding_enabled=%s')
 
 expectFailure('drain proof disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace('test "$DRAIN_DISPATCHING" = 0', 'echo no-drain-check')
