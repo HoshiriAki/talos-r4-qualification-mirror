@@ -78,6 +78,13 @@ expectFailure('rollback image no longer uses projected context', snapshot => {
   )
 }, 'docker build -t "$P9_IMAGE" "$P9_BUILD_CONTEXT"')
 
+expectFailure('post-admission circuit deferral disappears', snapshot => {
+  snapshot.runner = snapshot.runner.replace(
+    'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s',
+    'post-admission-deferral-removed',
+  )
+}, 'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s')
+
 expectFailure('drain proof disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace('test "$DRAIN_DISPATCHING" = 0', 'echo no-drain-check')
 }, 'test "$DRAIN_DISPATCHING" = 0')
@@ -130,4 +137,4 @@ expectFailure('SP05 returns to permanent Exact-Head job', snapshot => {
   snapshot.workflow += '\n  p10_sp05_rollback_forward_fix:\n    run: bash scripts/r4-p10-sp05-rollback-forward-fix.sh\n'
 }, 'must not hard-code P10-SP05 package job')
 
-console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 17 cases.')
+console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 18 cases.')
