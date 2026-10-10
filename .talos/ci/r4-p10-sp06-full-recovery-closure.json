@@ -1,0 +1,65 @@
+{
+  "schema": "talos.p10.full-recovery-closure-contract/v2",
+  "scope": "R4-P10-SP06",
+  "exitGate": "MIGRATION_BACKUP_RESTORE_ROLLBACK_PASS",
+  "dependsOn": [
+    "P10_ROLLBACK_FORWARD_FIX_PASS"
+  ],
+  "singleChain": true,
+  "authoritativeIdentity": {
+    "sourceShaEnv": "TALOS_QUALIFIED_SOURCE_SHA",
+    "sourceTreeEnv": "TALOS_QUALIFIED_SOURCE_TREE_SHA",
+    "migrationManifest": "per-file-sha256",
+    "transportShaIsNotSourceAuthority": true
+  },
+  "measuredRecovery": {
+    "backupDurationMs": true,
+    "restoreDurationMs": true,
+    "runtimeRecoveryMs": true,
+    "fullRehearsalMs": true,
+    "controlledDataLossWindowMs": true,
+    "controlledMissingMarkers": 1,
+    "interpretation": "measured_rehearsal_not_production_slo"
+  },
+  "protectedArtifact": {
+    "backupTool": "scripts/r4-p10-pg-backup.sh",
+    "verifyTool": "scripts/r4-p10-verify-backup.sh",
+    "restoreTool": "scripts/r4-p10-pg-restore.sh",
+    "plaintextRetained": false,
+    "runtimeSecretsRetained": false
+  },
+  "rollback": {
+    "sourceCommit": "2f414df89769ceedce482c4c25a24f02a24344b5",
+    "mode": "runtime-build-projection",
+    "privateGitObjectRequired": false,
+    "maxMigration": "083_r4_reservation_rule_sequence_invariant",
+    "compatibleRequired": true,
+    "incompatiblePreviousMigrationBlocked": true,
+    "destructiveDowngradeForbidden": true
+  },
+  "effectSafety": {
+    "drainBeforeCut": true,
+    "dispatchCrashCut": true,
+    "canonicalBindingFreeze": true,
+    "unknownOutcomeAfterRestart": true,
+    "blindRetryForbidden": true,
+    "reconciliationRequired": true,
+    "attemptCountStable": true,
+    "compensation": "not_applicable_nonfinancial_fixture"
+  },
+  "forwardFix": {
+    "currentExactApplicationRestart": true,
+    "tenantReadWriteRequired": true,
+    "sqliteProductionStateForbidden": true
+  },
+  "milestone": {
+    "qualificationSet": "p10",
+    "sameFrozenSha": true,
+    "requiresP9HistoricalDeploymentEvidence": true,
+    "finalGate": "P10_FROZEN_RECOVERY_EVIDENCE=PASS"
+  },
+  "claims": {
+    "recoveryRehearsal": "measured",
+    "rtoRpo": "measurement_only_not_slo"
+  }
+}

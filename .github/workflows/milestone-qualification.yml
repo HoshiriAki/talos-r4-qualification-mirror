@@ -14,6 +14,7 @@ on:
         type: choice
         options:
           - p9
+          - p10
 
 permissions:
   contents: read
@@ -291,3 +292,81 @@ jobs:
             test "$result" = "success"
           done
           echo "P9_HISTORICAL_DEPLOYMENT_EVIDENCE=PASS"
+
+
+  p10_full_recovery:
+    name: P10 measured full recovery rehearsal
+    needs: pin
+    if: inputs.qualification_set == 'p10'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout exact frozen source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify exact HEAD and bind source identity
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD"
+          tree="$(git rev-parse HEAD^{tree})"
+          echo "EXACT_HEAD=$actual"
+          echo "TALOS_QUALIFIED_SOURCE_SHA=$actual" >> "$GITHUB_ENV"
+          echo "TALOS_QUALIFIED_SOURCE_TREE_SHA=$tree" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable pinned 2026-09-12
+        with:
+          components: rustfmt
+
+      - name: Execute P10 full recovery rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .talos-evidence
+          set -o pipefail
+          bash scripts/r4-p10-sp06-full-recovery-closure.sh 2>&1 | tee .talos-evidence/p10-sp06-milestone-workflow.log
+
+      - name: Upload P10 recovery evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p10-full-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .talos-evidence
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: true
+
+  p10_evidence_gate:
+    name: P10 frozen recovery closure gate
+    if: always() && inputs.qualification_set == 'p10'
+    needs:
+      - pin
+      - p9_evidence_gate
+      - p10_full_recovery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require same-SHA deployment and recovery evidence
+        env:
+          PIN: ${{ needs.pin.result }}
+          P9: ${{ needs.p9_evidence_gate.result }}
+          P10: ${{ needs.p10_full_recovery.result }}
+        run: |
+          set -euo pipefail
+          test "$PIN" = "success"
+          test "$P9" = "success"
+          test "$P10" = "success"
+          echo "P10_FROZEN_RECOVERY_EVIDENCE=PASS"

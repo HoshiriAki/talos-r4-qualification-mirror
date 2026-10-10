@@ -45,6 +45,15 @@
       ],
       "qualification_script": "scripts/r4-p10-sp05-rollback-forward-fix.sh",
       "label": "p10-sp05-rollback-forward-fix"
+    },
+    {
+      "branch_prefix": "agent/r4-p10-sp06-",
+      "check_scripts": [
+        "scripts/check-r4-p10-sp06-full-recovery-closure.test.mjs",
+        "scripts/check-r4-p10-sp06-full-recovery-closure.mjs"
+      ],
+      "qualification_script": "scripts/r4-p10-sp06-full-recovery-closure.sh",
+      "label": "p10-sp06-full-recovery-closure"
     }
   ]
 }

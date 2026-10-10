@@ -12,6 +12,10 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     let database_url = std::env::var("TALOS_P10_RECOVERY_DATABASE_URL")?;
     let tenant_id = std::env::var("TALOS_P10_RECOVERY_TENANT_ID")?;
     let operation_id = ExternalOperationId::new(std::env::var("TALOS_P10_RECOVERY_OPERATION_ID")?)?;
+    let evidence_ref = std::env::var("TALOS_P10_RECOVERY_EVIDENCE_REF")
+        .unwrap_or_else(|_| "p10-sp05-provider-query-confirmed-effect".to_string());
+    let actor_ref = std::env::var("TALOS_P10_RECOVERY_ACTOR_REF")
+        .unwrap_or_else(|_| "p10-sp05-recovery-operator".to_string());
 
     let pool = PgPoolOptions::new()
         .max_connections(4)
@@ -62,7 +66,7 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     persistence.begin_reconciliation(
         &tenant_id,
         &operation_id,
-        "p10-sp05-provider-query-confirmed-effect",
+        &evidence_ref,
     )?;
 
     let reconciling: String =
@@ -85,13 +89,13 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(pending.0 == "pending");
-    anyhow::ensure!(pending.1 == "p10-sp05-provider-query-confirmed-effect");
+    anyhow::ensure!(pending.1 == evidence_ref);
 
     persistence.resolve_reconciliation(
         &tenant_id,
         &operation_id,
         true,
-        "p10-sp05-recovery-operator",
+        &actor_ref,
     )?;
 
     let resolved: (String, i64) = sqlx::query_as(
@@ -121,7 +125,7 @@ async fn p10_unknown_outcome_requires_reconciliation_before_retry() -> anyhow::R
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(reconciliation.0 == "effect_confirmed");
-    anyhow::ensure!(reconciliation.1.as_deref() == Some("p10-sp05-recovery-operator"));
+    anyhow::ensure!(reconciliation.1.as_deref() == Some(actor_ref.as_str()));
     anyhow::ensure!(reconciliation.2.is_some());
 
     println!(
