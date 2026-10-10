@@ -280,7 +280,7 @@ PY
 # Freeze this synthetic operation out of the production scheduler while the
 # rollback image is built. The production claim authority already treats a
 # future next_retry_at as not due; the later controlled crash cut clears it.
-docker exec "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U talos -d talos -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID" <<'SQL'
 \set ON_ERROR_STOP on
 UPDATE external_operations
 SET next_retry_at='9999-12-31T23:59:59Z',
@@ -346,7 +346,7 @@ test "$DRAIN_OUTBOX" = 0
 ATTEMPT_ID="p10-sp05-attempt-$SAFE_ID"
 EVENT_ID="p10-sp05-claimed-$SAFE_ID"
 echo "P10_SP05_STAGE crash_cut_begin"
-docker exec "$DB_CONTAINER" psql -U talos -d talos   -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID"   -v attempt_id="$ATTEMPT_ID" -v event_id="$EVENT_ID" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U talos -d talos   -v tenant_id="$TENANT_A_ID" -v operation_id="$OPERATION_ID"   -v attempt_id="$ATTEMPT_ID" -v event_id="$EVENT_ID" <<'SQL'
 \set ON_ERROR_STOP on
 BEGIN;
 UPDATE external_operations
