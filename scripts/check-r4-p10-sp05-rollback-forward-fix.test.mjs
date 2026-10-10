@@ -126,6 +126,13 @@ expectFailure('final evidence scan disappears', snapshot => {
   snapshot.runner = snapshot.runner.replace('if ! scan_evidence; then', 'if false; then')
 }, 'if ! scan_evidence; then')
 
+expectFailure('PostgreSQL heredoc loses interactive stdin', snapshot => {
+  snapshot.runner = snapshot.runner.replace(
+    'docker exec -i "$DB_CONTAINER" psql',
+    'docker exec "$DB_CONTAINER" psql',
+  )
+}, 'PostgreSQL heredoc fixtures must keep docker exec stdin open with -i')
+
 expectFailure('SP05 registration disappears', snapshot => {
   snapshot.registry = snapshot.registry.replace(
     '"branch_prefix": "agent/r4-p10-sp05-"',
@@ -137,4 +144,4 @@ expectFailure('SP05 returns to permanent Exact-Head job', snapshot => {
   snapshot.workflow += '\n  p10_sp05_rollback_forward_fix:\n    run: bash scripts/r4-p10-sp05-rollback-forward-fix.sh\n'
 }, 'must not hard-code P10-SP05 package job')
 
-console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 18 cases.')
+console.log('R4-P10-SP05 rollback/forward-fix mutation tests passed: 19 cases.')
