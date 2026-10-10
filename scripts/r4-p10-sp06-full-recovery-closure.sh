@@ -758,12 +758,17 @@ docker run -d \
   "$PG_IMAGE" > "$EVIDENCE_DIR/restore-container-id.txt"
 
 for _ in $(seq 1 60); do
-  if docker exec "$RESTORE_CONTAINER" pg_isready -U talos -d talos >/dev/null 2>&1; then
+  if docker exec "$RESTORE_CONTAINER" pg_isready -U talos -d talos >/dev/null 2>&1 \
+    && docker exec -i "$RESTORE_CONTAINER" psql -U talos -d talos -Atc "SELECT 1" 2>/dev/null | grep -Fx '1' >/dev/null
+  then
     break
   fi
   sleep 1
 done
 docker exec "$RESTORE_CONTAINER" pg_isready -U talos -d talos >/dev/null
+RESTORE_DATABASE_READY="$(docker exec -i "$RESTORE_CONTAINER" psql -U talos -d talos -Atc "SELECT 1")"
+test "$RESTORE_DATABASE_READY" = "1"
+echo "P10_SP06_RESTORE_DATABASE_READY database=talos probe=$RESTORE_DATABASE_READY"
 
 RESTORE_CONTAINER_ID="$(docker inspect -f '{{.Id}}' "$RESTORE_CONTAINER")"
 RESTORE_SYSTEM_ID="$(docker exec -i "$RESTORE_CONTAINER" psql -U talos -d talos -Atc "SELECT system_identifier FROM pg_control_system();")"
