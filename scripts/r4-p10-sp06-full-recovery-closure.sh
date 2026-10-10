@@ -205,13 +205,6 @@ rollback_candidate_max="${rollback_candidate_max%.sql}"
 test -n "$rollback_candidate_max"
 test "$rollback_candidate_max" = "$P9_ROLLBACK_MAX_MIGRATION"
 
-node scripts/r4-p10-schema-compatibility.mjs \
-  --candidate-ref "$P9_ROLLBACK_SOURCE_SHA" \
-  --candidate-max "$rollback_candidate_max" \
-  --restored-latest "$LATEST_MIGRATION" \
-  > "$EVIDENCE_DIR/compatible-schema-gate.log"
-grep -F ROLLBACK_SCHEMA_COMPATIBLE "$EVIDENCE_DIR/compatible-schema-gate.log" >/dev/null
-
 docker build -t "$P9_IMAGE" "$P9_BUILD_CONTEXT" > "$EVIDENCE_DIR/p9-image-build.log"
 
 "${compose[@]}" up -d --no-build db app nginx
@@ -484,6 +477,14 @@ test -n "$PG_SYSTEM_ID"
 test -n "$SERVER_VERSION"
 test -n "$MIGRATION_COUNT"
 test -n "$LATEST_MIGRATION"
+test "$LATEST_MIGRATION" = "$source_migration_registry_head"
+
+node scripts/r4-p10-schema-compatibility.mjs \
+  --candidate-ref "$P9_ROLLBACK_SOURCE_SHA" \
+  --candidate-max "$rollback_candidate_max" \
+  --restored-latest "$LATEST_MIGRATION" \
+  > "$EVIDENCE_DIR/compatible-schema-gate.log"
+grep -F ROLLBACK_SCHEMA_COMPATIBLE "$EVIDENCE_DIR/compatible-schema-gate.log" >/dev/null
 
 "${compose[@]}" stop -t 20 nginx app
 read -r APP_EXIT APP_OOM < <(docker inspect -f '{{.State.ExitCode}} {{.State.OOMKilled}}' "$APP_CONTAINER")
