@@ -139,6 +139,7 @@ export function validateP10Sp05Snapshot(snapshot) {
   const effect = contract.effectSafety ?? {}
   for (const key of [
     'drainBeforeCut',
+    'preCutSchedulerDeferral',
     'canonicalBindingFreeze',
     'dispatchCrashCut',
     'unknownOutcomeAfterRestart',
@@ -235,9 +236,10 @@ export function validateP10Sp05Snapshot(snapshot) {
     'DRAIN_DISPATCHING=',
     'DRAIN_WORKFLOW=',
     'DRAIN_OUTBOX=',
-    'P10_SP05_DEFERRED_OPERATION operation=%s circuit=%s',
+    "SET next_retry_at='9999-12-31T23:59:59Z'",
+    'P10_SP05_DEFERRED_OPERATION operation=%s binding_enabled=%s',
     "test \"$DEFERRED_OPERATION\" = 'ready|0|9999-12-31T23:59:59Z'",
-    "test \"$CIRCUIT_STATE\" = 'open|9999-12-31T23:59:59Z'",
+    'test "$PRE_CUT_BINDING_ENABLED" = t',
     'P10_SP05_DRAIN dispatching=%s workflow_running=%s outbox_processing=%s',
     'test "$DRAIN_DISPATCHING" = 0',
     "SET state='dispatching',attempt_count=1",
