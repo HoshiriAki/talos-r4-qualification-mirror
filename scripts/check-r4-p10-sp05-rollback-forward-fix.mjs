@@ -271,6 +271,16 @@ export function validateP10Sp05Snapshot(snapshot) {
     'P10_ROLLBACK_FORWARD_FIX_PASS',
   ])
 
+  const postgresHeredocLines = snapshot.runner
+    .split('\n')
+    .filter(line => line.includes("<<'SQL'") && line.includes('docker exec'))
+  if (
+    postgresHeredocLines.length !== 2 ||
+    postgresHeredocLines.some(line => !line.includes('docker exec -i "$DB_CONTAINER" psql'))
+  ) {
+    errors.push('SP05 PostgreSQL heredoc fixtures must keep docker exec stdin open with -i')
+  }
+
   for (const forbidden of [
     'git worktree add',
     'git cat-file -e "$P9_ROLLBACK',
